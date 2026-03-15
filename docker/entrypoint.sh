@@ -7,8 +7,12 @@ echo "🚀 Starting API Inspeccion..."
 touch /var/www/html/.env
 
 # Load .env variables into shell (EasyPanel writes env vars here)
+# Use line-by-line export to handle special characters (# in passwords, etc.)
 if [ -s /var/www/html/.env ]; then
-    export $(grep -v '^#' /var/www/html/.env | grep -v '^\s*$' | xargs) 2>/dev/null || true
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in \#*|"") continue ;; esac
+        export "$line" 2>/dev/null || true
+    done < /var/www/html/.env
 fi
 
 # Ensure storage directories exist with proper permissions
@@ -23,11 +27,11 @@ mkdir -p /var/log/supervisor
 
 # Wait for MySQL to be ready
 if [ "$DB_CONNECTION" = "mysql" ] && [ -n "$DB_HOST" ]; then
-    echo "⏳ Waiting for MySQL at ${DB_HOST}:${DB_PORT:-3306}..."
+    echo "⏳ Waiting for MySQL at ${DB_HOST}:${DB_PORT:-3306} (user: ${DB_USERNAME})..."
     MAX_RETRIES=30
     RETRY=0
     while [ $RETRY -lt $MAX_RETRIES ]; do
-        php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'ok'; } catch(\Exception \$e) { echo 'fail'; exit(1); }" 2>/dev/null && break
+        if php -r "try { new PDO('mysql:host='.getenv('DB_HOST').';port='.(getenv('DB_PORT')?:'3306'), getenv('DB_USERNAME')?:'root', getenv('DB_PASSWORD')?:''); echo 'ok'; exit(0); } catch(Exception \$e) { echo \$e->getMessage().PHP_EOL; exit(1); }"; then break; fi
         RETRY=$((RETRY + 1))
         echo "  Retry $RETRY/$MAX_RETRIES..."
         sleep 2
