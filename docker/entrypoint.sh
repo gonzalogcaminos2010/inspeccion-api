@@ -48,9 +48,11 @@ echo "⚡ Caching routes and views..."
 php artisan route:cache
 php artisan view:cache
 
-# Run database migrations
+# Run database migrations and seed
 echo "🗄️ Running migrations..."
 php artisan migrate --force
+echo "🌱 Seeding database..."
+php artisan db:seed --force
 
 echo "✅ Application ready! Starting services..."
 
