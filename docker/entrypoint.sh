@@ -3,6 +3,9 @@ set -e
 
 echo "🚀 Starting API Inspeccion..."
 
+# Create .env file (required by artisan commands)
+touch /var/www/html/.env
+
 # Ensure storage directories exist with proper permissions
 mkdir -p /var/www/html/storage/framework/{sessions,views,cache}
 mkdir -p /var/www/html/storage/logs
@@ -12,12 +15,6 @@ chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Create supervisor log directory
 mkdir -p /var/log/supervisor
-
-# Generate app key if not set
-if [ -z "$APP_KEY" ]; then
-    echo "🔑 Generating application key..."
-    php artisan key:generate --force
-fi
 
 # Wait for MySQL to be ready (if using MySQL)
 if [ "$DB_CONNECTION" = "mysql" ]; then
