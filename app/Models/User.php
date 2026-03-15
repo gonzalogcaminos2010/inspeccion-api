@@ -50,6 +50,26 @@ class User extends Authenticatable
         ];
     }
 
+    public function isSupervisor(): bool
+    {
+        return $this->role === 'supervisor';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function canApproveInspections(): bool
+    {
+        return $this->isSupervisor() || $this->isAdmin();
+    }
+
+    public function approvedInspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class, 'approved_by');
+    }
+
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class, 'inspector_id');

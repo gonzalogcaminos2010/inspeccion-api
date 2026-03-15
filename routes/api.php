@@ -56,6 +56,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/inspections/{inspection}/submit', [InspectionController::class, 'submit']);
     Route::post('/inspections/{inspection}/photos', [InspectionController::class, 'uploadPhotos']);
     Route::post('/inspections/{inspection}/findings', [InspectionController::class, 'createFinding']);
+    Route::post('/inspections/{inspection}/approve', [InspectionController::class, 'approve'])
+        ->middleware('role:supervisor,admin');
+    Route::post('/inspections/{inspection}/return', [InspectionController::class, 'returnInspection'])
+        ->middleware('role:supervisor,admin');
     Route::apiResource('inspections', InspectionController::class)->only(['index', 'show', 'store']);
 
     // Findings

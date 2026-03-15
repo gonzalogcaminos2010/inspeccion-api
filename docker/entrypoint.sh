@@ -64,3 +64,10 @@ echo "✅ Application ready! Starting services..."
 
 # Start Supervisor (manages PHP-FPM + Nginx)
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+php artisan migrate --force
+
+echo "✅ Application ready! Starting services..."
+
+# Start Supervisor (manages PHP-FPM + Nginx)
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+

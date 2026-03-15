@@ -27,6 +27,7 @@ class DashboardController extends Controller
             'total_equipment' => Equipment::count(),
             'total_inspections' => Inspection::count(),
             'pending_work_orders' => WorkOrder::where('status', 'pending')->count(),
+            'pending_reviews' => Inspection::where('status', 'submitted')->count(),
             'inspections_this_month' => Inspection::whereMonth('created_at', Carbon::now()->month)
                 ->whereYear('created_at', Carbon::now()->year)
                 ->count(),

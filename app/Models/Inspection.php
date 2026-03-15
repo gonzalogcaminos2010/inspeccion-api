@@ -16,12 +16,15 @@ class Inspection extends Model
         'inspection_template_id',
         'equipment_id',
         'inspector_id',
+        'approved_by',
         'status',
         'overall_result',
         'observations',
         'score',
         'started_at',
         'completed_at',
+        'approved_at',
+        'supervisor_notes',
     ];
 
     protected function casts(): array
@@ -29,6 +32,7 @@ class Inspection extends Model
         return [
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -50,6 +54,11 @@ class Inspection extends Model
     public function inspector(): BelongsTo
     {
         return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function answers(): HasMany

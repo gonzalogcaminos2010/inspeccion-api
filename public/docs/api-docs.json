@@ -34,7 +34,7 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Login",
-        "description": "Authenticate a user and receive a Sanctum bearer token.",
+        "description": "Authenticate a user and receive a Sanctum bearer token. Default users: Admin (admin@americanadvisor.com / password), Inspector (inspector@americanadvisor.com / password), Supervisor (supervisor@americanadvisor.com / password).",
         "security": [],
         "requestBody": {
           "required": true,
@@ -158,7 +158,7 @@
             "name": "role",
             "in": "query",
             "description": "Filter by user role",
-            "schema": { "type": "string", "enum": ["admin", "inspector", "coordinator"] }
+            "schema": { "type": "string", "enum": ["admin", "supervisor", "inspector", "coordinator"] }
           }
         ],
         "responses": {
@@ -1777,7 +1777,7 @@
       "post": {
         "tags": ["Inspections"],
         "summary": "Submit inspection",
-        "description": "Submit a completed inspection. Calculates the score based on yes/no answers and their flagged status. Sets overall_result to 'approved' (0 flagged), 'conditionally_approved' (<=30% flagged), or 'rejected' (>30% flagged). Changes status to 'completed' and sets completed_at. Also marks the related work order item as 'completed'.",
+        "description": "Submit a completed inspection for supervisor approval. Calculates the score based on yes/no answers and their flagged status. Sets overall_result to 'approved' (0 flagged), 'conditionally_approved' (<=30% flagged), or 'rejected' (>30% flagged). Changes status to 'submitted' (pending supervisor approval). The inspection must then be approved by a supervisor or admin before it is marked as 'completed'.",
         "parameters": [
           { "$ref": "#/components/parameters/IdParam" }
         ],
@@ -1802,6 +1802,132 @@
           },
           "401": { "$ref": "#/components/responses/Unauthenticated" },
           "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspections/{id}/approve": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Approve inspection",
+        "description": "Approve a submitted inspection as a supervisor or admin. Optionally override the auto-calculated final_result. Sets status to 'completed', records approved_by and approved_at. Also marks the related work order item as 'completed'.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "final_result": { "type": "string", "enum": ["approved", "conditionally_approved", "rejected"], "description": "Optional override of the auto-calculated result" },
+                  "supervisor_notes": { "type": "string", "description": "Optional notes from the supervisor" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inspection approved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionDetail" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": {
+            "description": "Forbidden – user is not a supervisor or admin",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Inspection is not in 'submitted' status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/{id}/return": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Return inspection",
+        "description": "Return a submitted inspection to the inspector for corrections. Sets status to 'returned'. Requires supervisor or admin role.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["supervisor_notes"],
+                "properties": {
+                  "supervisor_notes": { "type": "string", "description": "Explanation of what needs to be corrected" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inspection returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionDetail" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": {
+            "description": "Forbidden – user is not a supervisor or admin",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Inspection is not in 'submitted' status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
         }
       }
     },
@@ -2224,7 +2350,7 @@
           "id": { "type": "integer", "example": 1 },
           "name": { "type": "string", "example": "John Doe" },
           "email": { "type": "string", "format": "email", "example": "john@example.com" },
-          "role": { "type": "string", "enum": ["admin", "inspector", "coordinator"], "example": "admin" },
+          "role": { "type": "string", "enum": ["admin", "supervisor", "inspector", "coordinator"], "example": "admin" },
           "created_at": { "type": "string", "format": "date-time", "example": "2026-01-15T10:30:00.000000Z" }
         }
       },
@@ -2438,12 +2564,15 @@
           "inspection_template_id": { "type": "integer", "example": 1 },
           "equipment_id": { "type": "integer", "example": 1 },
           "inspector_id": { "type": "integer", "example": 2 },
-          "status": { "type": "string", "enum": ["in_progress", "completed"], "example": "in_progress" },
+          "status": { "type": "string", "enum": ["in_progress", "submitted", "returned", "completed"], "example": "in_progress" },
           "overall_result": { "type": "string", "nullable": true, "enum": ["approved", "conditionally_approved", "rejected"], "example": null },
           "observations": { "type": "string", "nullable": true },
           "score": { "type": "integer", "nullable": true, "example": null, "description": "Percentage score (0-100), calculated on submit" },
           "started_at": { "type": "string", "format": "date-time", "nullable": true },
           "completed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "approved_by": { "type": "integer", "nullable": true, "example": null, "description": "User ID of the supervisor who approved/returned the inspection" },
+          "approved_at": { "type": "string", "format": "date-time", "nullable": true, "example": null, "description": "Timestamp when the inspection was approved" },
+          "supervisor_notes": { "type": "string", "nullable": true, "example": null, "description": "Notes from the supervisor during approval or return" },
           "created_at": { "type": "string", "format": "date-time" },
           "template": {
             "nullable": true,
@@ -2459,6 +2588,11 @@
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/Equipment" }],
             "description": "Included when loaded"
+          },
+          "approver": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/User" }],
+            "description": "Supervisor who approved the inspection. Included when loaded"
           }
         }
       },
@@ -2569,6 +2703,7 @@
           "total_equipment": { "type": "integer", "example": 150 },
           "total_inspections": { "type": "integer", "example": 340 },
           "pending_work_orders": { "type": "integer", "example": 8 },
+          "pending_reviews": { "type": "integer", "example": 3, "description": "Number of inspections with 'submitted' status awaiting supervisor approval" },
           "inspections_this_month": { "type": "integer", "example": 42 },
           "recent_inspections": {
             "type": "array",
@@ -2592,7 +2727,7 @@
           "name": { "type": "string", "maxLength": 255, "example": "Jane Doe" },
           "email": { "type": "string", "format": "email", "maxLength": 255, "example": "jane@example.com", "description": "Must be unique" },
           "password": { "type": "string", "format": "password", "minLength": 8, "example": "securepass123" },
-          "role": { "type": "string", "maxLength": 50, "enum": ["admin", "inspector", "coordinator"], "example": "inspector" }
+          "role": { "type": "string", "maxLength": 50, "enum": ["admin", "supervisor", "inspector", "coordinator"], "example": "inspector" }
         }
       },
       "CreateClientRequest": {

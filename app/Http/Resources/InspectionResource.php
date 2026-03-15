@@ -21,6 +21,9 @@ class InspectionResource extends JsonResource
             'score' => $this->score,
             'started_at' => $this->started_at,
             'completed_at' => $this->completed_at,
+            'approved_by' => $this->approved_by,
+            'approved_at' => $this->approved_at,
+            'supervisor_notes' => $this->supervisor_notes,
             'created_at' => $this->created_at,
             'template' => new InspectionTemplateResource($this->whenLoaded('template')),
             'answers' => InspectionAnswerResource::collection($this->whenLoaded('answers')),
@@ -28,6 +31,7 @@ class InspectionResource extends JsonResource
             'findings' => FindingResource::collection($this->whenLoaded('findings')),
             'work_order_item' => new WorkOrderItemResource($this->whenLoaded('workOrderItem')),
             'inspector' => new UserResource($this->whenLoaded('inspector')),
+            'approver' => new UserResource($this->whenLoaded('approver')),
             'equipment' => new EquipmentResource($this->whenLoaded('equipment')),
         ];
     }

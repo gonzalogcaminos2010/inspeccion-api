@@ -14,12 +14,18 @@ Mining vehicle inspection management system. Enables companies (clients) in the 
 - Manages all entities: clients, equipment, service types, users, inspection templates
 - Creates and manages inspection requests and work orders
 - Views dashboard statistics
-- Can create inspector users
+- Can create inspector and supervisor users
+- Can approve or return inspections (same permissions as supervisor)
+
+### Supervisor
+- Reviews submitted inspections from base
+- Approves inspections (sets final status to completed, can override result)
+- Returns inspections to inspector with notes for corrections
 
 ### Inspector
 - Assigned to work orders
 - Performs inspections: answers template questions, uploads photos, creates findings
-- Submits inspections for automatic result calculation
+- Submits inspections for supervisor approval (preliminary result auto-calculated)
 
 ## Core Workflow
 
@@ -41,7 +47,12 @@ Inspection (per WorkOrderItem, performed by Inspector)
   |-- Findings (issues discovered, with severity)
   |
   v
-Submit --> auto-calculates score + overall_result
+Submit --> auto-calculates score + overall_result (status: submitted)
+  |
+  v
+Supervisor Review
+  |-- Approve --> status: completed (can override result)
+  |-- Return --> status: returned (inspector corrects and re-submits)
 ```
 
 ### Step-by-step:
@@ -55,8 +66,10 @@ Submit --> auto-calculates score + overall_result
 7. **Inspector creates an Inspection** for each WorkOrderItem. This sets the item status to `in_progress`.
 8. **Inspector answers questions** from the template (yes/no, text, number, select, photo types). Answers are saved with automatic flag detection.
 9. **Inspector uploads photos** and/or **creates findings** for issues found.
-10. **Inspector submits the inspection** -- the system auto-calculates the result.
-11. **Inspector completes the WorkOrder** once all items are completed/skipped.
+10. **Inspector submits the inspection** -- the system auto-calculates a preliminary result. Status becomes `submitted`.
+11. **Supervisor reviews** the submitted inspection from base.
+12. **Supervisor approves** (status → `completed`, can override result) or **returns** (status → `returned`, inspector corrects and re-submits).
+13. **Inspector completes the WorkOrder** once all items are completed/skipped.
 
 ## Business Rules
 
@@ -106,7 +119,7 @@ Submit --> auto-calculates score + overall_result
 - **InspectionRequest**: `pending` (default), and other string values.
 - **WorkOrder**: `pending` (default), `in_progress`, `completed`.
 - **WorkOrderItem**: `pending` (default), `in_progress`, `completed`, `skipped`.
-- **Inspection**: `draft` (default from migration), `in_progress` (set on create), `completed` (set on submit).
+- **Inspection**: `draft` (default from migration), `in_progress` (set on create), `submitted` (set on submit, pending supervisor review), `returned` (returned by supervisor for corrections), `completed` (approved by supervisor).
 - **Equipment**: `active` (default), and other string values.
 - **Finding**: `is_resolved` boolean, with `resolved_at` timestamp and `resolved_by` user.
 

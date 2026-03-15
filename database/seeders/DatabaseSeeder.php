@@ -23,6 +23,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::factory()->create([
+            'name' => 'Supervisor Demo',
+            'email' => 'supervisor@americanadvisor.com',
+            'password' => bcrypt('password'),
+            'role' => 'supervisor',
+        ]);
+
+        User::factory()->create([
             'name' => 'Inspector Demo',
             'email' => 'inspector@americanadvisor.com',
             'password' => bcrypt('password'),

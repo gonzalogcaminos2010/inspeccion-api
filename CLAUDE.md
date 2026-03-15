@@ -9,27 +9,32 @@ Clients (mining companies) request inspections of their fleet vehicles. Admins c
 ## Documentation Files
 
 - **`project_spec.md`** — Business context, actors, core workflow, and all business rules (flag detection, scoring, template sync, numbering, statuses).
-- **`architecture.md`** — Technical architecture: full database schema (14 domain tables), complete endpoint list (52 routes), API resources, response format, seeder data.
+- **`architecture.md`** — Technical architecture: full database schema (14 domain tables), complete endpoint list (54 routes), API resources, response format, seeder data.
 - **`project_state.md`** — Current implementation state, what has been verified, default credentials, and what remains to be done.
+- **`public/docs/api-docs.json`** — OpenAPI 3.0.0 specification (Swagger). All 54 endpoints with schemas.
+- **`public/docs/index.html`** — Swagger UI, accessible at `http://localhost:8000/docs/index.html`
 
 **Read these files first when resuming work on this project.**
 
 ## Current State (as of 2026-03-15)
 
-- All 17 migrations and seeders functional
-- 52 API routes registered across 11 controllers
+- All 18 migrations and seeders functional
+- 54 API routes registered across 11 controllers
 - 14 Eloquent models with relationships
 - 14 API Resource classes
-- Full inspection workflow: Request -> WorkOrder -> Inspection -> Answers -> Submit (with auto-scoring)
+- Full inspection workflow: Request -> WorkOrder -> Inspection -> Answers -> Submit -> Supervisor Approve/Return (with auto-scoring)
+- Supervisor approval flow with CheckRole middleware (role:supervisor,admin)
 - Code formatted with Laravel Pint
-- **No automated tests, no FormRequest classes, no role-based middleware, no PDF reports**
+- Swagger UI documentation at `http://localhost:8000/docs/index.html`
+- **No automated tests, no FormRequest classes, no PDF reports**
 
 ## Default Credentials
 
-| Role      | Email                             | Password |
-| --------- | --------------------------------- | -------- |
-| Admin     | admin@americanadvisor.com         | password |
-| Inspector | inspector@americanadvisor.com     | password |
+| Role       | Email                             | Password |
+| ---------- | --------------------------------- | -------- |
+| Admin      | admin@americanadvisor.com         | password |
+| Supervisor | supervisor@americanadvisor.com    | password |
+| Inspector  | inspector@americanadvisor.com     | password |
 
 ## Common Commands
 
@@ -54,6 +59,9 @@ composer run setup        # Install deps, generate key, migrate, build frontend
 
 # Routes
 php artisan route:list    # List all registered routes
+
+# API Docs (Swagger)
+# Start server first, then open: http://localhost:8000/docs/index.html
 ```
 
 ## Architecture
@@ -69,10 +77,11 @@ php artisan route:list    # List all registered routes
 ## Key Directories
 
 - `app/Http/Controllers/Api/V1/` — 11 API controllers
+- `app/Http/Middleware/` — CheckRole middleware
 - `app/Http/Resources/` — 14 API Resource classes
 - `app/Models/` — 14 Eloquent models
 - `app/Traits/ApiResponse.php` — Standardized response trait
-- `database/migrations/` — 17 migration files
+- `database/migrations/` — 18 migration files
 - `database/seeders/` — DatabaseSeeder + InspectionTemplateSeeder
 - `routes/api.php` — All API routes (v1 prefix)
 

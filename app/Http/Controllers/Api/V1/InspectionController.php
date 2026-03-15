@@ -137,6 +137,10 @@ class InspectionController extends Controller
 
     public function submit(Inspection $inspection)
     {
+        if (! in_array($inspection->status, ['in_progress', 'returned'])) {
+            return $this->error('Inspection can only be submitted from in_progress or returned status.', 422);
+        }
+
         $inspection->load('answers.question');
 
         $yesNoAnswers = $inspection->answers->filter(fn ($a) => $a->question && $a->question->type === 'yes_no');
@@ -159,13 +163,46 @@ class InspectionController extends Controller
         }
 
         $inspection->update([
-            'status' => 'completed',
+            'status' => 'submitted',
             'overall_result' => $overallResult,
             'score' => $score,
-            'completed_at' => now(),
+            'supervisor_notes' => null,
         ]);
 
-        // Update the work order item status
+        $inspection->load([
+            'template.sections.questions',
+            'answers',
+            'photos',
+            'findings.photos',
+            'workOrderItem.workOrder',
+            'inspector',
+            'equipment',
+        ]);
+
+        return $this->success(new InspectionResource($inspection), 'Inspection submitted successfully. Pending supervisor approval.');
+    }
+
+    public function approve(Request $request, Inspection $inspection)
+    {
+        if ($inspection->status !== 'submitted') {
+            return $this->error('Only submitted inspections can be approved.', 422);
+        }
+
+        $validated = $request->validate([
+            'final_result' => 'nullable|string|in:approved,conditionally_approved,rejected',
+            'supervisor_notes' => 'nullable|string',
+        ]);
+
+        $inspection->update([
+            'status' => 'completed',
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'completed_at' => now(),
+            'supervisor_notes' => $validated['supervisor_notes'] ?? null,
+            'overall_result' => $validated['final_result'] ?? $inspection->overall_result,
+        ]);
+
+        // Now mark the work order item as completed
         if ($inspection->workOrderItem) {
             $inspection->workOrderItem->update(['status' => 'completed']);
         } else {
@@ -181,9 +218,38 @@ class InspectionController extends Controller
             'workOrderItem.workOrder',
             'inspector',
             'equipment',
+            'approver',
         ]);
 
-        return $this->success(new InspectionResource($inspection), 'Inspection submitted successfully');
+        return $this->success(new InspectionResource($inspection), 'Inspection approved successfully.');
+    }
+
+    public function returnInspection(Request $request, Inspection $inspection)
+    {
+        if ($inspection->status !== 'submitted') {
+            return $this->error('Only submitted inspections can be returned.', 422);
+        }
+
+        $validated = $request->validate([
+            'supervisor_notes' => 'required|string',
+        ]);
+
+        $inspection->update([
+            'status' => 'returned',
+            'supervisor_notes' => $validated['supervisor_notes'],
+        ]);
+
+        $inspection->load([
+            'template.sections.questions',
+            'answers',
+            'photos',
+            'findings.photos',
+            'workOrderItem.workOrder',
+            'inspector',
+            'equipment',
+        ]);
+
+        return $this->success(new InspectionResource($inspection), 'Inspection returned to inspector.');
     }
 
     public function uploadPhotos(Request $request, Inspection $inspection)

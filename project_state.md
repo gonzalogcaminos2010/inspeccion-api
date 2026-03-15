@@ -29,7 +29,7 @@ Last updated: 2026-03-15
 - InspectionRequestController: full CRUD
 - InspectionTemplateController: full CRUD + duplicate
 - WorkOrderController: full CRUD + start, complete, items
-- InspectionController: index, show, store, saveAnswers, submit, uploadPhotos, createFinding
+- InspectionController: index, show, store, saveAnswers, submit, approve, returnInspection, uploadPhotos, createFinding
 - FindingController: full CRUD with resolution tracking
 
 ### Phase 4: API Resources (14 resources)
@@ -44,29 +44,42 @@ Last updated: 2026-03-15
 - Overall result calculation on inspection submit (approved / conditionally_approved / rejected)
 - Score calculation: ((total - flagged) / total) * 100
 - Work order completion guard (all items must be completed/skipped)
+- Supervisor approval workflow: submit → submitted (pending review) → approved (completed) or returned (inspector corrects)
+- CheckRole middleware for role-based route protection (supervisor, admin)
 - Finding resolution tracking (resolved_at, resolved_by auto-set)
 - Photo upload to public storage
 
 ### Phase 6: Seeders
-- DatabaseSeeder creates 2 users (admin + inspector)
+- DatabaseSeeder creates 3 users (admin + supervisor + inspector)
 - InspectionTemplateSeeder creates a complete mining 4x4 inspection template with 10 sections, 63 questions
 
 ### Phase 7: Code Quality
 - Laravel Pint formatting applied across codebase
 
+### Phase 8: API Documentation (Swagger)
+- OpenAPI 3.0.0 specification created at `public/docs/api-docs.json` (109KB)
+- Swagger UI served at `http://localhost:8000/docs/index.html` (CDN-based, no package dependency)
+- All 52 endpoints documented with request/response schemas
+- 30+ component schemas (model resources, request bodies, enums)
+- 11 tag groups matching controller organization
+- Try-it-out enabled for interactive API testing
+- Bearer token auth configured in Swagger UI
+
 ## What Has Been Verified
 
-- All 17 migrations run successfully
-- Database seeder runs without errors (2 users + 1 template with 10 sections and 63 questions)
-- 52 routes registered (confirmed via `php artisan route:list`)
+- All 18 migrations run successfully
+- Database seeder runs without errors (3 users + 1 template with 10 sections and 63 questions)
+- 54 routes registered (confirmed via `php artisan route:list`)
 - Code formatted with Laravel Pint
+- Swagger UI accessible at `http://localhost:8000/docs/index.html`
 
 ## Default Credentials
 
-| Role      | Email                             | Password |
-| --------- | --------------------------------- | -------- |
-| Admin     | admin@americanadvisor.com         | password |
-| Inspector | inspector@americanadvisor.com     | password |
+| Role       | Email                             | Password |
+| ---------- | --------------------------------- | -------- |
+| Admin      | admin@americanadvisor.com         | password |
+| Supervisor | supervisor@americanadvisor.com    | password |
+| Inspector  | inspector@americanadvisor.com     | password |
 
 ## What Is NOT Yet Done / Potential Next Steps
 
@@ -79,8 +92,8 @@ Last updated: 2026-03-15
 - Extracting to FormRequest classes would improve reusability, testability, and separation of concerns.
 
 ### Authorization / Access Control
-- **No middleware for role-based access control.** Both admin and inspector roles exist in the database, but there is no enforcement -- any authenticated user can access any endpoint.
-- Needed: middleware or Gate/Policy classes to restrict admin-only actions (user management, client CRUD, template management) from inspector-only actions (performing inspections).
+- **Partial role-based access control.** A `CheckRole` middleware exists and is applied to supervisor-only routes (approve, return inspections). However, most endpoints are still unprotected -- any authenticated user can access admin-only actions (user management, client CRUD, template management).
+- Needed: apply `role` middleware more broadly to restrict admin-only endpoints from inspectors.
 
 ### Notifications
 - **No email notifications** implemented. No notification classes, no mail configuration beyond defaults.
@@ -101,8 +114,10 @@ Last updated: 2026-03-15
 - **No rate limiting configured** beyond Laravel defaults. The login endpoint is not rate-limited.
 
 ### API Documentation
-- **No Swagger/OpenAPI specification.** The endpoint list is documented in `architecture.md` but there is no machine-readable API spec.
-- Potential: install `l5-swagger` or `scramble` for auto-generated docs.
+- Swagger/OpenAPI 3.0.0 spec implemented at `public/docs/api-docs.json`
+- Swagger UI at `http://localhost:8000/docs/index.html`
+- The spec is manually maintained (not auto-generated). When adding/modifying endpoints, update `api-docs.json` manually.
+- Potential improvement: install `dedoc/scramble` for auto-generated docs from code annotations.
 
 ### Other Potential Improvements
 - Soft deletes on key models (clients, equipment, inspections)
