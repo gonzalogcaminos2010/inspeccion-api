@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(composer require:*)",
+      "Bash(php:*)",
+      "Bash(cd:*)",
+      "Bash(composer config:*)"
+    ]
+  }
+}

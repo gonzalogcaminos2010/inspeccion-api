@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class InspectionResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'work_order_item_id' => $this->work_order_item_id,
+            'inspection_template_id' => $this->inspection_template_id,
+            'equipment_id' => $this->equipment_id,
+            'inspector_id' => $this->inspector_id,
+            'status' => $this->status,
+            'overall_result' => $this->overall_result,
+            'observations' => $this->observations,
+            'score' => $this->score,
+            'started_at' => $this->started_at,
+            'completed_at' => $this->completed_at,
+            'created_at' => $this->created_at,
+            'template' => new InspectionTemplateResource($this->whenLoaded('template')),
+            'answers' => InspectionAnswerResource::collection($this->whenLoaded('answers')),
+            'photos' => InspectionPhotoResource::collection($this->whenLoaded('photos')),
+            'findings' => FindingResource::collection($this->whenLoaded('findings')),
+            'work_order_item' => new WorkOrderItemResource($this->whenLoaded('workOrderItem')),
+            'inspector' => new UserResource($this->whenLoaded('inspector')),
+            'equipment' => new EquipmentResource($this->whenLoaded('equipment')),
+        ];
+    }
+}
