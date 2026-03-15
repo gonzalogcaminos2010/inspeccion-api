@@ -5,7 +5,11 @@
       "Bash(composer require:*)",
       "Bash(php:*)",
       "Bash(cd:*)",
-      "Bash(composer config:*)"
+      "Bash(composer config:*)",
+      "Bash(./vendor/bin/pint 2>&1)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
