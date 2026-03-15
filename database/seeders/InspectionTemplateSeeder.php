@@ -9,6 +9,10 @@ class InspectionTemplateSeeder extends Seeder
 {
     public function run(): void
     {
+        if (InspectionTemplate::where('code', 'INSP-4X4-MIN')->exists()) {
+            return;
+        }
+
         $template = InspectionTemplate::create([
             'name' => 'Inspección Camioneta 4x4 - Minería',
             'code' => 'INSP-4X4-MIN',
