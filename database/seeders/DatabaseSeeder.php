@@ -15,26 +15,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Admin',
-            'email' => 'admin@americanadvisor.com',
-            'password' => bcrypt('password'),
-            'role' => 'admin',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@americanadvisor.com'],
+            ['name' => 'Admin', 'password' => bcrypt('password'), 'role' => 'admin']
+        );
 
-        User::factory()->create([
-            'name' => 'Supervisor Demo',
-            'email' => 'supervisor@americanadvisor.com',
-            'password' => bcrypt('password'),
-            'role' => 'supervisor',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'supervisor@americanadvisor.com'],
+            ['name' => 'Supervisor Demo', 'password' => bcrypt('password'), 'role' => 'supervisor']
+        );
 
-        User::factory()->create([
-            'name' => 'Inspector Demo',
-            'email' => 'inspector@americanadvisor.com',
-            'password' => bcrypt('password'),
-            'role' => 'inspector',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'inspector@americanadvisor.com'],
+            ['name' => 'Inspector Demo', 'password' => bcrypt('password'), 'role' => 'inspector']
+        );
 
         $this->call([
             InspectionTemplateSeeder::class,
