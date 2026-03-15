@@ -51,9 +51,8 @@ if [ "$DB_CONNECTION" = "sqlite" ]; then
     fi
 fi
 
-# Cache configuration for performance
-echo "⚡ Caching configuration..."
-php artisan config:cache
+# Cache routes and views for performance (NOT config - env vars come from EasyPanel)
+echo "⚡ Caching routes and views..."
 php artisan route:cache
 php artisan view:cache
 
