@@ -1,0 +1,2891 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "American Advisor Inspecciones API",
+    "version": "1.0.0",
+    "description": "REST API for mining vehicle inspection management. Handles clients, equipment, inspection requests, work orders, inspection templates, inspections with answers/photos/findings, and dashboard statistics."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1",
+      "description": "Development"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Authentication endpoints" },
+    { "name": "Users", "description": "User management" },
+    { "name": "Dashboard", "description": "Dashboard statistics" },
+    { "name": "Clients", "description": "Client management" },
+    { "name": "Equipment", "description": "Equipment/vehicle management" },
+    { "name": "Service Types", "description": "Service type catalog" },
+    { "name": "Inspection Requests", "description": "Inspection request management" },
+    { "name": "Inspection Templates", "description": "Inspection template management with sections and questions" },
+    { "name": "Work Orders", "description": "Work order management with items" },
+    { "name": "Inspections", "description": "Inspection execution, answers, photos, and findings" },
+    { "name": "Findings", "description": "Inspection finding management" }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login",
+        "description": "Authenticate a user and receive a Sanctum bearer token.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "token": { "type": "string", "example": "1|abc123tokenstring" },
+                            "user": { "$ref": "#/components/schemas/User" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout",
+        "description": "Revoke the current access token.",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get current user",
+        "description": "Return the authenticated user's profile.",
+        "responses": {
+          "200": {
+            "description": "Current user data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/User" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List users",
+        "description": "Retrieve a paginated list of users. Filterable by role and search term.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "Filter by user role",
+            "schema": { "type": "string", "enum": ["admin", "inspector", "coordinator"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/User" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create user",
+        "description": "Create a new user account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/User" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/stats": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get dashboard statistics",
+        "description": "Retrieve summary statistics including total clients, equipment, inspections, pending work orders, inspections this month, and recent inspections.",
+        "responses": {
+          "200": {
+            "description": "Dashboard stats retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/DashboardStats" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/clients": {
+      "get": {
+        "tags": ["Clients"],
+        "summary": "List clients",
+        "description": "Retrieve a paginated list of clients. Includes equipment count. Filterable by search and active status.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filter by active status (true or false)",
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Clients retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Client" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Clients"],
+        "summary": "Create client",
+        "description": "Create a new client.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateClientRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Client" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients/{id}": {
+      "get": {
+        "tags": ["Clients"],
+        "summary": "Get client",
+        "description": "Retrieve a single client by ID. Includes equipment count.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Client" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Clients"],
+        "summary": "Update client",
+        "description": "Update an existing client. All fields are optional.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateClientRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Client" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Clients"],
+        "summary": "Delete client",
+        "description": "Delete a client by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/equipment": {
+      "get": {
+        "tags": ["Equipment"],
+        "summary": "List equipment",
+        "description": "Retrieve a paginated list of equipment. Includes related client. Filterable by search, client_id, status, and type.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "client_id",
+            "in": "query",
+            "description": "Filter by client ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by equipment status",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter by equipment type",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Equipment retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Equipment" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Equipment"],
+        "summary": "Create equipment",
+        "description": "Create a new equipment/vehicle record.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEquipmentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Equipment created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Equipment" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/equipment/{id}": {
+      "get": {
+        "tags": ["Equipment"],
+        "summary": "Get equipment",
+        "description": "Retrieve a single equipment record by ID. Includes related client.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Equipment data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Equipment" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Equipment"],
+        "summary": "Update equipment",
+        "description": "Update an existing equipment record.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEquipmentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Equipment updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Equipment" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Equipment"],
+        "summary": "Delete equipment",
+        "description": "Delete an equipment record by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Equipment deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/service-types": {
+      "get": {
+        "tags": ["Service Types"],
+        "summary": "List service types",
+        "description": "Retrieve a paginated list of service types. Filterable by search and active status.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service types retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/ServiceType" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Service Types"],
+        "summary": "Create service type",
+        "description": "Create a new service type.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateServiceTypeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service type created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/ServiceType" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-types/{id}": {
+      "get": {
+        "tags": ["Service Types"],
+        "summary": "Get service type",
+        "description": "Retrieve a single service type by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service type data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/ServiceType" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Service Types"],
+        "summary": "Update service type",
+        "description": "Update an existing service type.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateServiceTypeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service type updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/ServiceType" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Service Types"],
+        "summary": "Delete service type",
+        "description": "Delete a service type by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service type deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspection-requests": {
+      "get": {
+        "tags": ["Inspection Requests"],
+        "summary": "List inspection requests",
+        "description": "Retrieve a paginated list of inspection requests. Includes client, service type, and work order count. Filterable by search, client_id, status, and service_type_id.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "client_id",
+            "in": "query",
+            "description": "Filter by client ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by request status",
+            "schema": { "type": "string", "enum": ["pending", "approved", "in_progress", "completed", "cancelled"] }
+          },
+          {
+            "name": "service_type_id",
+            "in": "query",
+            "description": "Filter by service type ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection requests retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/InspectionRequest" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Inspection Requests"],
+        "summary": "Create inspection request",
+        "description": "Create a new inspection request. The request_number is auto-generated. The created_by field is set to the authenticated user.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInspectionRequestRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inspection request created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionRequest" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspection-requests/{id}": {
+      "get": {
+        "tags": ["Inspection Requests"],
+        "summary": "Get inspection request",
+        "description": "Retrieve a single inspection request by ID. Includes client, service type, creator, and work orders.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection request data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionRequest" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Inspection Requests"],
+        "summary": "Update inspection request",
+        "description": "Update an existing inspection request.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateInspectionRequestRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inspection request updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionRequest" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Inspection Requests"],
+        "summary": "Delete inspection request",
+        "description": "Delete an inspection request by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection request deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspection-templates": {
+      "get": {
+        "tags": ["Inspection Templates"],
+        "summary": "List inspection templates",
+        "description": "Retrieve a paginated list of inspection templates. Filterable by search, is_active, and vehicle_type.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "vehicle_type",
+            "in": "query",
+            "description": "Filter by vehicle type",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection templates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/InspectionTemplate" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Inspection Templates"],
+        "summary": "Create inspection template",
+        "description": "Create a new inspection template with optional nested sections and questions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInspectionTemplateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inspection template created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionTemplate" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspection-templates/{id}": {
+      "get": {
+        "tags": ["Inspection Templates"],
+        "summary": "Get inspection template",
+        "description": "Retrieve a single inspection template by ID. Includes sections ordered by 'order' field, and each section includes its questions ordered by 'order' field.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection template data with sections and questions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionTemplate" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Inspection Templates"],
+        "summary": "Update inspection template",
+        "description": "Update an existing inspection template. Supports full replacement of sections and questions. Sections/questions without an 'id' field are created; those with an 'id' are updated; existing sections/questions not present in the request are deleted.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateInspectionTemplateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inspection template updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionTemplate" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Inspection Templates"],
+        "summary": "Delete inspection template",
+        "description": "Delete an inspection template by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection template deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspection-templates/{id}/duplicate": {
+      "post": {
+        "tags": ["Inspection Templates"],
+        "summary": "Duplicate inspection template",
+        "description": "Create a copy of an existing inspection template including all sections and questions. The copy gets a new code with '-COPY-{timestamp}' suffix, incremented version, and is_active set to false.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the template to duplicate",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Inspection template duplicated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionTemplate" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/work-orders": {
+      "get": {
+        "tags": ["Work Orders"],
+        "summary": "List work orders",
+        "description": "Retrieve a paginated list of work orders. Includes inspection request and inspector. Filterable by search, inspection_request_id, inspector_id, and status.",
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchParam" },
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "inspection_request_id",
+            "in": "query",
+            "description": "Filter by inspection request ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "inspector_id",
+            "in": "query",
+            "description": "Filter by inspector user ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by work order status",
+            "schema": { "type": "string", "enum": ["pending", "in_progress", "completed", "cancelled"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/WorkOrder" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Work Orders"],
+        "summary": "Create work order",
+        "description": "Create a new work order with one or more items. Each item links an equipment to an inspection template. The order_number is auto-generated.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateWorkOrderRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Work order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/WorkOrder" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work-orders/{id}": {
+      "get": {
+        "tags": ["Work Orders"],
+        "summary": "Get work order",
+        "description": "Retrieve a single work order by ID. Includes inspection request, inspector, and items with equipment and template.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/WorkOrder" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Work Orders"],
+        "summary": "Update work order",
+        "description": "Update an existing work order's metadata (does not update items).",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateWorkOrderRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work order updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/WorkOrder" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Work Orders"],
+        "summary": "Delete work order",
+        "description": "Delete a work order by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/work-orders/{id}/start": {
+      "post": {
+        "tags": ["Work Orders"],
+        "summary": "Start work order",
+        "description": "Transition a work order to 'in_progress' status and record the started_at timestamp.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/WorkOrder" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/work-orders/{id}/complete": {
+      "post": {
+        "tags": ["Work Orders"],
+        "summary": "Complete work order",
+        "description": "Transition a work order to 'completed' status and record the completed_at timestamp. All work order items must be in 'completed' or 'skipped' status before the work order can be completed.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/WorkOrder" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Not all items are completed or skipped",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/work-orders/{id}/items": {
+      "get": {
+        "tags": ["Work Orders"],
+        "summary": "Get work order items",
+        "description": "Retrieve all items for a specific work order. Each item includes related equipment and template.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order items retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/WorkOrderItem" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspections": {
+      "get": {
+        "tags": ["Inspections"],
+        "summary": "List inspections",
+        "description": "Retrieve a paginated list of inspections. Includes template, equipment, and inspector. Filterable by work_order_id, inspector_id, status, and equipment_id.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "work_order_id",
+            "in": "query",
+            "description": "Filter by work order ID (finds inspections whose work order item belongs to this work order)",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "inspector_id",
+            "in": "query",
+            "description": "Filter by inspector user ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by inspection status",
+            "schema": { "type": "string", "enum": ["in_progress", "completed"] }
+          },
+          {
+            "name": "equipment_id",
+            "in": "query",
+            "description": "Filter by equipment ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspections retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Inspection" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Create inspection",
+        "description": "Start a new inspection from a work order item. The inspection template and equipment are derived from the work order item. The inspector is set to the authenticated user. The inspection starts in 'in_progress' status.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInspectionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inspection created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Inspection" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/{id}": {
+      "get": {
+        "tags": ["Inspections"],
+        "summary": "Get inspection",
+        "description": "Retrieve a single inspection by ID. Includes template with sections/questions, answers, photos, findings with photos, work order item with work order, inspector, and equipment.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection data with all related resources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionDetail" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspections/{id}/answers": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Save inspection answers",
+        "description": "Save or update answers for an inspection. Uses upsert logic (updateOrCreate) based on inspection_id + template_question_id. Answers to yes_no questions are automatically checked against fail_values and flagged accordingly.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SaveAnswersRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Answers saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/InspectionAnswer" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/{id}/submit": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Submit inspection",
+        "description": "Submit a completed inspection. Calculates the score based on yes/no answers and their flagged status. Sets overall_result to 'approved' (0 flagged), 'conditionally_approved' (<=30% flagged), or 'rejected' (>30% flagged). Changes status to 'completed' and sets completed_at. Also marks the related work order item as 'completed'.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inspection submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/InspectionDetail" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/inspections/{id}/photos": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Upload inspection photos",
+        "description": "Upload one or more photos for an inspection. Photos can optionally be linked to a template question or finding. Files are stored in 'inspections/{inspection_id}/' on the public disk. Max file size is 5MB per image.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/UploadPhotosRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Photos uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/InspectionPhoto" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/{id}/findings": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Create finding for inspection",
+        "description": "Create a new finding directly associated with an inspection. The inspection_id is taken from the URL path.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInspectionFindingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Finding created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Finding" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings": {
+      "get": {
+        "tags": ["Findings"],
+        "summary": "List findings",
+        "description": "Retrieve a paginated list of findings. Includes related question. Filterable by inspection_id, severity, and is_resolved.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "inspection_id",
+            "in": "query",
+            "description": "Filter by inspection ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "description": "Filter by severity level",
+            "schema": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+          },
+          {
+            "name": "is_resolved",
+            "in": "query",
+            "description": "Filter by resolved status",
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Findings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Finding" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      },
+      "post": {
+        "tags": ["Findings"],
+        "summary": "Create finding",
+        "description": "Create a new finding. Requires an inspection_id in the request body.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateFindingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Finding created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Finding" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings/{id}": {
+      "get": {
+        "tags": ["Findings"],
+        "summary": "Get finding",
+        "description": "Retrieve a single finding by ID. Includes related question, resolver, and photos.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Finding data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/FindingDetail" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Findings"],
+        "summary": "Update finding",
+        "description": "Update an existing finding. When is_resolved is set to true, resolved_at and resolved_by are automatically set. When set back to false, they are cleared.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateFindingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Finding updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Finding" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Findings"],
+        "summary": "Delete finding",
+        "description": "Delete a finding by ID.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Finding deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Sanctum Token",
+        "description": "Use the token returned from POST /login"
+      }
+    },
+    "parameters": {
+      "IdParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource ID",
+        "schema": { "type": "integer" }
+      },
+      "SearchParam": {
+        "name": "search",
+        "in": "query",
+        "description": "Search term (matches against relevant text fields)",
+        "schema": { "type": "string" }
+      },
+      "PerPageParam": {
+        "name": "per_page",
+        "in": "query",
+        "description": "Number of items per page (default: 15)",
+        "schema": { "type": "integer", "default": 15 }
+      }
+    },
+    "responses": {
+      "Unauthenticated": {
+        "description": "Unauthenticated - missing or invalid bearer token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "Unauthenticated." }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "No query results for model." }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string", "example": "Success" }
+        },
+        "required": ["success", "message"]
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string", "example": "Success" },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        },
+        "required": ["success", "message", "pagination"]
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "current_page": { "type": "integer", "example": 1 },
+          "last_page": { "type": "integer", "example": 5 },
+          "per_page": { "type": "integer", "example": 15 },
+          "total": { "type": "integer", "example": 72 }
+        },
+        "required": ["current_page", "last_page", "per_page", "total"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string", "example": "Error message" }
+        },
+        "required": ["success", "message"]
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "The given data was invalid." },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "example": {
+              "email": ["The email field is required."],
+              "password": ["The password field is required."]
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "John Doe" },
+          "email": { "type": "string", "format": "email", "example": "john@example.com" },
+          "role": { "type": "string", "enum": ["admin", "inspector", "coordinator"], "example": "admin" },
+          "created_at": { "type": "string", "format": "date-time", "example": "2026-01-15T10:30:00.000000Z" }
+        }
+      },
+      "Client": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Minera Los Andes S.A." },
+          "ruc": { "type": "string", "nullable": true, "example": "20123456789" },
+          "address": { "type": "string", "nullable": true, "example": "Av. Industrial 123, Lima" },
+          "contact_name": { "type": "string", "nullable": true, "example": "Carlos Perez" },
+          "contact_email": { "type": "string", "format": "email", "nullable": true, "example": "carlos@minera.com" },
+          "contact_phone": { "type": "string", "nullable": true, "example": "+51999888777" },
+          "is_active": { "type": "boolean", "example": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "equipment_count": { "type": "integer", "example": 12, "description": "Only present when equipment count is loaded" }
+        }
+      },
+      "Equipment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "client_id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Excavadora CAT 390F" },
+          "type": { "type": "string", "nullable": true, "example": "excavadora" },
+          "brand": { "type": "string", "nullable": true, "example": "Caterpillar" },
+          "model": { "type": "string", "nullable": true, "example": "390F" },
+          "year": { "type": "integer", "nullable": true, "example": 2022 },
+          "plate": { "type": "string", "nullable": true, "example": "ABC-123" },
+          "serial_number": { "type": "string", "nullable": true, "example": "CAT390F2022001" },
+          "internal_code": { "type": "string", "nullable": true, "example": "EXC-001" },
+          "status": { "type": "string", "nullable": true, "example": "active" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "client": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/Client" }],
+            "description": "Included when client relationship is loaded"
+          }
+        }
+      },
+      "ServiceType": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Inspeccion Pre-Uso" },
+          "description": { "type": "string", "nullable": true, "example": "Inspeccion diaria antes del uso del equipo" },
+          "is_active": { "type": "boolean", "example": true },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "InspectionRequest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "request_number": { "type": "string", "example": "REQ-20260315-0001" },
+          "number": { "type": "string", "nullable": true },
+          "client_id": { "type": "integer", "example": 1 },
+          "service_type_id": { "type": "integer", "example": 1 },
+          "requested_date": { "type": "string", "format": "date", "example": "2026-03-15" },
+          "scheduled_date": { "type": "string", "format": "date", "nullable": true, "example": "2026-03-20" },
+          "status": { "type": "string", "enum": ["pending", "approved", "in_progress", "completed", "cancelled"], "example": "pending" },
+          "notes": { "type": "string", "nullable": true },
+          "created_by": { "type": "integer", "example": 1 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "client": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/Client" }],
+            "description": "Included when loaded"
+          },
+          "service_type": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/ServiceType" }],
+            "description": "Included when loaded"
+          },
+          "creator": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/User" }],
+            "description": "Included when loaded"
+          },
+          "work_orders": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WorkOrder" },
+            "description": "Included when loaded (show endpoint)"
+          },
+          "work_orders_count": {
+            "type": "integer",
+            "example": 2,
+            "description": "Included when count is loaded"
+          }
+        }
+      },
+      "InspectionTemplate": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Inspeccion Pre-Uso Excavadora" },
+          "code": { "type": "string", "example": "IPU-EXC-001" },
+          "description": { "type": "string", "nullable": true },
+          "vehicle_type": { "type": "string", "nullable": true, "example": "excavadora" },
+          "is_active": { "type": "boolean", "example": true },
+          "version": { "type": "integer", "nullable": true, "example": 1 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "sections": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TemplateSection" },
+            "description": "Included when sections are loaded (show/store/update)"
+          }
+        }
+      },
+      "TemplateSection": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "inspection_template_id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Seccion Motor" },
+          "order": { "type": "integer", "example": 1 },
+          "description": { "type": "string", "nullable": true },
+          "questions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TemplateQuestion" },
+            "description": "Included when questions are loaded"
+          }
+        }
+      },
+      "TemplateQuestion": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "template_section_id": { "type": "integer", "example": 1 },
+          "text": { "type": "string", "example": "¿El nivel de aceite es correcto?" },
+          "type": { "type": "string", "enum": ["yes_no", "text", "number", "multiple_choice", "photo"], "example": "yes_no" },
+          "options": {
+            "type": "array",
+            "items": { "type": "string" },
+            "nullable": true,
+            "description": "Options for multiple_choice type questions",
+            "example": ["Good", "Fair", "Poor"]
+          },
+          "is_required": { "type": "boolean", "example": true },
+          "order": { "type": "integer", "example": 1 },
+          "fail_values": {
+            "type": "array",
+            "items": { "type": "string" },
+            "nullable": true,
+            "description": "Values that trigger a flagged answer. For yes_no: '0' means false/No is a fail, '1' means true/Yes is a fail.",
+            "example": ["0"]
+          }
+        }
+      },
+      "WorkOrder": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "order_number": { "type": "string", "example": "OT-20260315-0001" },
+          "inspection_request_id": { "type": "integer", "example": 1 },
+          "inspector_id": { "type": "integer", "nullable": true, "example": 2 },
+          "scheduled_date": { "type": "string", "format": "date", "nullable": true, "example": "2026-03-20" },
+          "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "cancelled"], "example": "pending" },
+          "notes": { "type": "string", "nullable": true },
+          "started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "completed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "inspection_request": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/InspectionRequest" }],
+            "description": "Included when loaded"
+          },
+          "inspector": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/User" }],
+            "description": "Included when loaded"
+          },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WorkOrderItem" },
+            "description": "Included when loaded (show/store)"
+          }
+        }
+      },
+      "WorkOrderItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "work_order_id": { "type": "integer", "example": 1 },
+          "equipment_id": { "type": "integer", "example": 1 },
+          "inspection_template_id": { "type": "integer", "example": 1 },
+          "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "skipped"], "example": "pending" },
+          "notes": { "type": "string", "nullable": true },
+          "equipment": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/Equipment" }],
+            "description": "Included when loaded"
+          },
+          "template": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/InspectionTemplate" }],
+            "description": "Included when loaded"
+          },
+          "inspection": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/Inspection" }],
+            "description": "Included when loaded"
+          }
+        }
+      },
+      "Inspection": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "work_order_item_id": { "type": "integer", "example": 1 },
+          "inspection_template_id": { "type": "integer", "example": 1 },
+          "equipment_id": { "type": "integer", "example": 1 },
+          "inspector_id": { "type": "integer", "example": 2 },
+          "status": { "type": "string", "enum": ["in_progress", "completed"], "example": "in_progress" },
+          "overall_result": { "type": "string", "nullable": true, "enum": ["approved", "conditionally_approved", "rejected"], "example": null },
+          "observations": { "type": "string", "nullable": true },
+          "score": { "type": "integer", "nullable": true, "example": null, "description": "Percentage score (0-100), calculated on submit" },
+          "started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "completed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "template": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/InspectionTemplate" }],
+            "description": "Included when loaded"
+          },
+          "inspector": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/User" }],
+            "description": "Included when loaded"
+          },
+          "equipment": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/Equipment" }],
+            "description": "Included when loaded"
+          }
+        }
+      },
+      "InspectionDetail": {
+        "type": "object",
+        "description": "Full inspection with all nested relationships (used by show and submit endpoints)",
+        "allOf": [
+          { "$ref": "#/components/schemas/Inspection" },
+          {
+            "type": "object",
+            "properties": {
+              "answers": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/InspectionAnswer" }
+              },
+              "photos": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/InspectionPhoto" }
+              },
+              "findings": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/FindingDetail" }
+              },
+              "work_order_item": {
+                "allOf": [{ "$ref": "#/components/schemas/WorkOrderItem" }]
+              }
+            }
+          }
+        ]
+      },
+      "InspectionAnswer": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "inspection_id": { "type": "integer", "example": 1 },
+          "template_question_id": { "type": "integer", "example": 1 },
+          "answer_text": { "type": "string", "nullable": true, "example": "Good condition" },
+          "answer_boolean": { "type": "boolean", "nullable": true, "example": true },
+          "answer_number": { "type": "number", "nullable": true, "example": 7.5 },
+          "answer_json": { "type": "object", "nullable": true, "description": "Arbitrary JSON data for complex answer types" },
+          "is_flagged": { "type": "boolean", "example": false, "description": "Automatically set based on fail_values comparison" },
+          "notes": { "type": "string", "nullable": true },
+          "question": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/TemplateQuestion" }],
+            "description": "Included when loaded"
+          }
+        }
+      },
+      "InspectionPhoto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "inspection_id": { "type": "integer", "example": 1 },
+          "template_question_id": { "type": "integer", "nullable": true },
+          "finding_id": { "type": "integer", "nullable": true },
+          "photo_path": { "type": "string", "example": "inspections/1/abc123.jpg" },
+          "photo_url": { "type": "string", "format": "uri", "nullable": true, "example": "http://localhost:8000/storage/inspections/1/abc123.jpg" },
+          "caption": { "type": "string", "nullable": true, "example": "Visible crack on the frame" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Finding": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "inspection_id": { "type": "integer", "example": 1 },
+          "template_question_id": { "type": "integer", "nullable": true },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"], "example": "high" },
+          "description": { "type": "string", "example": "Hydraulic oil leak detected on main cylinder" },
+          "recommendation": { "type": "string", "example": "Replace hydraulic seals immediately" },
+          "is_resolved": { "type": "boolean", "example": false },
+          "resolved_at": { "type": "string", "format": "date-time", "nullable": true },
+          "resolved_by": { "type": "integer", "nullable": true, "description": "User ID who resolved the finding" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "question": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/TemplateQuestion" }],
+            "description": "Included when loaded"
+          }
+        }
+      },
+      "FindingDetail": {
+        "type": "object",
+        "description": "Finding with all nested relationships (used by show endpoint)",
+        "allOf": [
+          { "$ref": "#/components/schemas/Finding" },
+          {
+            "type": "object",
+            "properties": {
+              "resolver": {
+                "nullable": true,
+                "allOf": [{ "$ref": "#/components/schemas/User" }],
+                "description": "User who resolved the finding"
+              },
+              "photos": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/InspectionPhoto" }
+              }
+            }
+          }
+        ]
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "total_clients": { "type": "integer", "example": 25 },
+          "total_equipment": { "type": "integer", "example": 150 },
+          "total_inspections": { "type": "integer", "example": 340 },
+          "pending_work_orders": { "type": "integer", "example": 8 },
+          "inspections_this_month": { "type": "integer", "example": 42 },
+          "recent_inspections": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Inspection" },
+            "description": "Last 5 inspections with equipment, inspector, and template"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "admin@example.com" },
+          "password": { "type": "string", "format": "password", "example": "password123" }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["name", "email", "password", "role"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Jane Doe" },
+          "email": { "type": "string", "format": "email", "maxLength": 255, "example": "jane@example.com", "description": "Must be unique" },
+          "password": { "type": "string", "format": "password", "minLength": 8, "example": "securepass123" },
+          "role": { "type": "string", "maxLength": 50, "enum": ["admin", "inspector", "coordinator"], "example": "inspector" }
+        }
+      },
+      "CreateClientRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Minera Los Andes S.A." },
+          "ruc": { "type": "string", "maxLength": 20, "nullable": true, "example": "20123456789" },
+          "address": { "type": "string", "maxLength": 500, "nullable": true, "example": "Av. Industrial 123, Lima" },
+          "contact_name": { "type": "string", "maxLength": 255, "nullable": true, "example": "Carlos Perez" },
+          "contact_email": { "type": "string", "format": "email", "maxLength": 255, "nullable": true, "example": "carlos@minera.com" },
+          "contact_phone": { "type": "string", "maxLength": 20, "nullable": true, "example": "+51999888777" },
+          "is_active": { "type": "boolean", "nullable": true, "default": true }
+        }
+      },
+      "UpdateClientRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Minera Los Andes S.A.C." },
+          "ruc": { "type": "string", "maxLength": 20, "nullable": true },
+          "address": { "type": "string", "maxLength": 500, "nullable": true },
+          "contact_name": { "type": "string", "maxLength": 255, "nullable": true },
+          "contact_email": { "type": "string", "format": "email", "maxLength": 255, "nullable": true },
+          "contact_phone": { "type": "string", "maxLength": 20, "nullable": true },
+          "is_active": { "type": "boolean", "nullable": true }
+        }
+      },
+      "CreateEquipmentRequest": {
+        "type": "object",
+        "required": ["client_id", "name"],
+        "properties": {
+          "client_id": { "type": "integer", "example": 1, "description": "Must reference an existing client" },
+          "name": { "type": "string", "maxLength": 255, "example": "Excavadora CAT 390F" },
+          "type": { "type": "string", "maxLength": 255, "nullable": true, "example": "excavadora" },
+          "brand": { "type": "string", "maxLength": 255, "nullable": true, "example": "Caterpillar" },
+          "model": { "type": "string", "maxLength": 255, "nullable": true, "example": "390F" },
+          "year": { "type": "integer", "nullable": true, "example": 2022 },
+          "plate": { "type": "string", "maxLength": 50, "nullable": true, "example": "ABC-123" },
+          "serial_number": { "type": "string", "maxLength": 100, "nullable": true, "example": "CAT390F2022001" },
+          "internal_code": { "type": "string", "maxLength": 100, "nullable": true, "example": "EXC-001" },
+          "status": { "type": "string", "maxLength": 50, "nullable": true, "example": "active" }
+        }
+      },
+      "UpdateEquipmentRequest": {
+        "type": "object",
+        "properties": {
+          "client_id": { "type": "integer", "description": "Must reference an existing client" },
+          "name": { "type": "string", "maxLength": 255 },
+          "type": { "type": "string", "maxLength": 255, "nullable": true },
+          "brand": { "type": "string", "maxLength": 255, "nullable": true },
+          "model": { "type": "string", "maxLength": 255, "nullable": true },
+          "year": { "type": "integer", "nullable": true },
+          "plate": { "type": "string", "maxLength": 50, "nullable": true },
+          "serial_number": { "type": "string", "maxLength": 100, "nullable": true },
+          "internal_code": { "type": "string", "maxLength": 100, "nullable": true },
+          "status": { "type": "string", "maxLength": 50, "nullable": true }
+        }
+      },
+      "CreateServiceTypeRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Inspeccion Pre-Uso" },
+          "description": { "type": "string", "nullable": true, "example": "Inspeccion diaria antes del uso del equipo" },
+          "is_active": { "type": "boolean", "nullable": true, "default": true }
+        }
+      },
+      "UpdateServiceTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "description": { "type": "string", "nullable": true },
+          "is_active": { "type": "boolean", "nullable": true }
+        }
+      },
+      "CreateInspectionRequestRequest": {
+        "type": "object",
+        "required": ["client_id", "service_type_id", "requested_date"],
+        "properties": {
+          "client_id": { "type": "integer", "example": 1, "description": "Must reference an existing client" },
+          "service_type_id": { "type": "integer", "example": 1, "description": "Must reference an existing service type" },
+          "requested_date": { "type": "string", "format": "date", "example": "2026-03-15" },
+          "scheduled_date": { "type": "string", "format": "date", "nullable": true, "example": "2026-03-20" },
+          "status": { "type": "string", "nullable": true, "enum": ["pending", "approved", "in_progress", "completed", "cancelled"], "example": "pending" },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "UpdateInspectionRequestRequest": {
+        "type": "object",
+        "properties": {
+          "client_id": { "type": "integer", "description": "Must reference an existing client" },
+          "service_type_id": { "type": "integer", "description": "Must reference an existing service type" },
+          "requested_date": { "type": "string", "format": "date" },
+          "scheduled_date": { "type": "string", "format": "date", "nullable": true },
+          "status": { "type": "string", "nullable": true, "enum": ["pending", "approved", "in_progress", "completed", "cancelled"] },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "CreateInspectionTemplateRequest": {
+        "type": "object",
+        "required": ["name", "code"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Inspeccion Pre-Uso Excavadora" },
+          "code": { "type": "string", "maxLength": 100, "example": "IPU-EXC-001", "description": "Must be unique" },
+          "description": { "type": "string", "nullable": true },
+          "vehicle_type": { "type": "string", "maxLength": 100, "nullable": true, "example": "excavadora" },
+          "is_active": { "type": "boolean", "nullable": true, "default": true },
+          "sections": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "object",
+              "required": ["name", "order"],
+              "properties": {
+                "name": { "type": "string", "maxLength": 255, "example": "Motor" },
+                "order": { "type": "integer", "example": 1 },
+                "description": { "type": "string", "nullable": true },
+                "questions": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": {
+                    "type": "object",
+                    "required": ["text", "type", "order"],
+                    "properties": {
+                      "text": { "type": "string", "example": "¿El nivel de aceite es correcto?" },
+                      "type": { "type": "string", "enum": ["yes_no", "text", "number", "multiple_choice", "photo"], "example": "yes_no" },
+                      "options": { "type": "array", "items": { "type": "string" }, "nullable": true },
+                      "is_required": { "type": "boolean", "nullable": true, "default": true },
+                      "order": { "type": "integer", "example": 1 },
+                      "fail_values": { "type": "array", "items": { "type": "string" }, "nullable": true, "example": ["0"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "UpdateInspectionTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "code": { "type": "string", "maxLength": 100, "description": "Must be unique (excluding current template)" },
+          "description": { "type": "string", "nullable": true },
+          "vehicle_type": { "type": "string", "maxLength": 100, "nullable": true },
+          "is_active": { "type": "boolean", "nullable": true },
+          "sections": {
+            "type": "array",
+            "nullable": true,
+            "description": "Full replacement: sections without an 'id' are created, those with 'id' are updated, existing sections not in the array are deleted.",
+            "items": {
+              "type": "object",
+              "required": ["name", "order"],
+              "properties": {
+                "id": { "type": "integer", "nullable": true, "description": "Include to update an existing section; omit to create a new one" },
+                "name": { "type": "string", "maxLength": 255 },
+                "order": { "type": "integer" },
+                "description": { "type": "string", "nullable": true },
+                "questions": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": {
+                    "type": "object",
+                    "required": ["text", "type", "order"],
+                    "properties": {
+                      "id": { "type": "integer", "nullable": true, "description": "Include to update an existing question; omit to create a new one" },
+                      "text": { "type": "string" },
+                      "type": { "type": "string", "enum": ["yes_no", "text", "number", "multiple_choice", "photo"] },
+                      "options": { "type": "array", "items": { "type": "string" }, "nullable": true },
+                      "is_required": { "type": "boolean", "nullable": true, "default": true },
+                      "order": { "type": "integer" },
+                      "fail_values": { "type": "array", "items": { "type": "string" }, "nullable": true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateWorkOrderRequest": {
+        "type": "object",
+        "required": ["inspection_request_id", "items"],
+        "properties": {
+          "inspection_request_id": { "type": "integer", "example": 1, "description": "Must reference an existing inspection request" },
+          "inspector_id": { "type": "integer", "nullable": true, "example": 2, "description": "Must reference an existing user" },
+          "scheduled_date": { "type": "string", "format": "date", "nullable": true, "example": "2026-03-20" },
+          "notes": { "type": "string", "nullable": true },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["equipment_id", "inspection_template_id"],
+              "properties": {
+                "equipment_id": { "type": "integer", "example": 1, "description": "Must reference an existing equipment" },
+                "inspection_template_id": { "type": "integer", "example": 1, "description": "Must reference an existing inspection template" }
+              }
+            }
+          }
+        }
+      },
+      "UpdateWorkOrderRequest": {
+        "type": "object",
+        "properties": {
+          "inspection_request_id": { "type": "integer", "description": "Must reference an existing inspection request" },
+          "inspector_id": { "type": "integer", "nullable": true, "description": "Must reference an existing user" },
+          "scheduled_date": { "type": "string", "format": "date", "nullable": true },
+          "status": { "type": "string", "nullable": true, "enum": ["pending", "in_progress", "completed", "cancelled"] },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "CreateInspectionRequest": {
+        "type": "object",
+        "required": ["work_order_item_id"],
+        "properties": {
+          "work_order_item_id": { "type": "integer", "example": 1, "description": "Must reference an existing work order item. The inspection template, equipment, and inspector are derived from the item and authenticated user." }
+        }
+      },
+      "SaveAnswersRequest": {
+        "type": "object",
+        "required": ["answers"],
+        "properties": {
+          "answers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["template_question_id"],
+              "properties": {
+                "template_question_id": { "type": "integer", "example": 1, "description": "Must reference an existing template question" },
+                "answer_text": { "type": "string", "nullable": true, "example": "Good condition", "description": "Text answer (for text-type questions)" },
+                "answer_boolean": { "type": "boolean", "nullable": true, "example": true, "description": "Boolean answer (for yes_no-type questions)" },
+                "answer_number": { "type": "number", "nullable": true, "example": 7.5, "description": "Numeric answer (for number-type questions)" },
+                "answer_json": { "type": "object", "nullable": true, "description": "JSON answer (for complex question types)" },
+                "notes": { "type": "string", "nullable": true, "example": "Minor wear observed" }
+              }
+            }
+          }
+        }
+      },
+      "UploadPhotosRequest": {
+        "type": "object",
+        "required": ["photos"],
+        "properties": {
+          "photos": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["file"],
+              "properties": {
+                "file": { "type": "string", "format": "binary", "description": "Image file (max 5MB)" },
+                "template_question_id": { "type": "integer", "nullable": true, "description": "Optional: link photo to a specific question" },
+                "finding_id": { "type": "integer", "nullable": true, "description": "Optional: link photo to a specific finding" },
+                "caption": { "type": "string", "maxLength": 500, "nullable": true, "example": "Visible crack on the frame" }
+              }
+            }
+          }
+        }
+      },
+      "CreateInspectionFindingRequest": {
+        "type": "object",
+        "required": ["severity", "description"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"], "example": "high" },
+          "description": { "type": "string", "example": "Hydraulic oil leak detected on main cylinder" },
+          "recommendation": { "type": "string", "nullable": true, "example": "Replace hydraulic seals immediately" },
+          "template_question_id": { "type": "integer", "nullable": true, "description": "Optional: link finding to a specific question" }
+        }
+      },
+      "CreateFindingRequest": {
+        "type": "object",
+        "required": ["inspection_id", "severity", "description", "recommendation"],
+        "properties": {
+          "inspection_id": { "type": "integer", "example": 1, "description": "Must reference an existing inspection" },
+          "template_question_id": { "type": "integer", "nullable": true, "description": "Optional: link finding to a specific question" },
+          "severity": { "type": "string", "maxLength": 50, "enum": ["low", "medium", "high", "critical"], "example": "high" },
+          "description": { "type": "string", "example": "Hydraulic oil leak detected on main cylinder" },
+          "recommendation": { "type": "string", "example": "Replace hydraulic seals immediately" }
+        }
+      },
+      "UpdateFindingRequest": {
+        "type": "object",
+        "properties": {
+          "inspection_id": { "type": "integer", "description": "Must reference an existing inspection" },
+          "template_question_id": { "type": "integer", "nullable": true },
+          "severity": { "type": "string", "maxLength": 50, "enum": ["low", "medium", "high", "critical"] },
+          "description": { "type": "string" },
+          "recommendation": { "type": "string" },
+          "is_resolved": { "type": "boolean", "description": "When set to true, resolved_at and resolved_by are automatically populated. When set back to false, they are cleared." }
+        }
+      }
+    }
+  }
+}

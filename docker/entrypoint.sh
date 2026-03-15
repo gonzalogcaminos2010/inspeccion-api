@@ -3,15 +3,6 @@ set -e
 
 echo "🚀 Starting API Inspeccion..."
 
-# Create SQLite database if using SQLite and file doesn't exist
-if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
-    if [ ! -f /var/www/html/database/database.sqlite ]; then
-        echo "📦 Creating SQLite database..."
-        touch /var/www/html/database/database.sqlite
-        chown www-data:www-data /var/www/html/database/database.sqlite
-    fi
-fi
-
 # Ensure storage directories exist with proper permissions
 mkdir -p /var/www/html/storage/framework/{sessions,views,cache}
 mkdir -p /var/www/html/storage/logs
@@ -26,6 +17,41 @@ mkdir -p /var/log/supervisor
 if [ -z "$APP_KEY" ]; then
     echo "🔑 Generating application key..."
     php artisan key:generate --force
+fi
+
+# Wait for MySQL to be ready (if using MySQL)
+if [ "$DB_CONNECTION" = "mysql" ]; then
+    echo "⏳ Waiting for MySQL at ${DB_HOST}:${DB_PORT:-3306}..."
+    MAX_RETRIES=30
+    RETRY=0
+    while [ $RETRY -lt $MAX_RETRIES ]; do
+        php -r "
+            try {
+                new PDO('mysql:host=${DB_HOST};port=${DB_PORT}', '${DB_USERNAME}', '${DB_PASSWORD}');
+                echo 'connected';
+                exit(0);
+            } catch (Exception \$e) {
+                exit(1);
+            }
+        " 2>/dev/null && break
+        RETRY=$((RETRY + 1))
+        echo "  Retry $RETRY/$MAX_RETRIES..."
+        sleep 2
+    done
+    if [ $RETRY -eq $MAX_RETRIES ]; then
+        echo "❌ Could not connect to MySQL after $MAX_RETRIES attempts"
+        exit 1
+    fi
+    echo "✅ MySQL is ready!"
+fi
+
+# SQLite fallback
+if [ "$DB_CONNECTION" = "sqlite" ]; then
+    if [ ! -f /var/www/html/database/database.sqlite ]; then
+        echo "📦 Creating SQLite database..."
+        touch /var/www/html/database/database.sqlite
+        chown www-data:www-data /var/www/html/database/database.sqlite
+    fi
 fi
 
 # Cache configuration for performance
