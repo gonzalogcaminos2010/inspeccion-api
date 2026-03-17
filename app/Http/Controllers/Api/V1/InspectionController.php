@@ -307,8 +307,8 @@ class InspectionController extends Controller
 
         $role = $validated['role'];
 
-        if ($inspection->status !== 'completed') {
-            return $this->error('Signatures can only be added to completed inspections.', 422);
+        if (! in_array($inspection->status, ['submitted', 'completed'])) {
+            return $this->error('Signatures can only be added to submitted or completed inspections.', 422);
         }
 
         $signatureField = $role.'_signature';

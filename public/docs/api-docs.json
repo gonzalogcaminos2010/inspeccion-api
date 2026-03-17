@@ -2034,7 +2034,7 @@
       "post": {
         "tags": ["Inspections"],
         "summary": "Sign inspection",
-        "description": "Record a signature (inspector, supervisor, or client) for a completed inspection. The signature is a base64-encoded PNG image from a signature canvas. Inspector must be the assigned inspector. Supervisor must have supervisor or admin role. Client signature can be recorded by any authenticated user (inspector lends device). Each role can only sign once.",
+        "description": "Record a signature (inspector, supervisor, or client) for a submitted or completed inspection. Inspector and client sign at submit time (status 'submitted'), supervisor signs after approval (status 'completed'). The signature is a base64-encoded PNG image from a signature canvas. Inspector must be the assigned inspector. Supervisor must have supervisor or admin role. Client signature can be recorded by any authenticated user (inspector lends device). Each role can only sign once.",
         "parameters": [
           { "$ref": "#/components/parameters/IdParam" }
         ],
@@ -2083,7 +2083,7 @@
           "403": { "description": "Unauthorized to sign with the specified role" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "422": {
-            "description": "Inspection not completed, signature already exists, or invalid data",
+            "description": "Inspection not in submitted/completed status, signature already exists, or invalid data",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
