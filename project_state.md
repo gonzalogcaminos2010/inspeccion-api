@@ -1,6 +1,6 @@
 # Project State - api-inspeccion
 
-Last updated: 2026-03-15
+Last updated: 2026-03-17
 
 ## What Has Been Implemented
 
@@ -29,7 +29,7 @@ Last updated: 2026-03-15
 - InspectionRequestController: full CRUD
 - InspectionTemplateController: full CRUD + duplicate
 - WorkOrderController: full CRUD + start, complete, items
-- InspectionController: index, show, store, saveAnswers, submit, approve, returnInspection, uploadPhotos, createFinding
+- InspectionController: index, show, store, saveAnswers, submit, approve, returnInspection, uploadPhotos, createFinding, sign
 - FindingController: full CRUD with resolution tracking
 
 ### Phase 4: API Resources (14 resources)
@@ -48,6 +48,7 @@ Last updated: 2026-03-15
 - CheckRole middleware for role-based route protection (supervisor, admin)
 - Finding resolution tracking (resolved_at, resolved_by auto-set)
 - Photo upload to public storage
+- Signature collection: inspector, supervisor, and client can sign completed inspections (base64 PNG → stored in `signatures/{inspection_id}/`). `all_signatures_complete` computed field tracks when all 3 are done.
 
 ### Phase 6: Seeders
 - DatabaseSeeder creates 3 users (admin + supervisor + inspector)
@@ -69,7 +70,7 @@ Last updated: 2026-03-15
 
 - All 18 migrations run successfully
 - Database seeder runs without errors (3 users + 1 template with 10 sections and 63 questions)
-- 54 routes registered (confirmed via `php artisan route:list`)
+- 55 routes registered (confirmed via `php artisan route:list`)
 - Code formatted with Laravel Pint
 - Swagger UI accessible at `http://localhost:8000/docs/index.html`
 

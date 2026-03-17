@@ -76,14 +76,14 @@ class WorkOrderController extends Controller
             return $workOrder;
         });
 
-        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template']);
+        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template', 'items.inspection']);
 
         return $this->success(new WorkOrderResource($workOrder), 'Work order created successfully', 201);
     }
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template']);
+        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template', 'items.inspection']);
 
         return $this->success(new WorkOrderResource($workOrder));
     }
@@ -140,7 +140,7 @@ class WorkOrderController extends Controller
 
     public function items(WorkOrder $workOrder)
     {
-        $items = $workOrder->items()->with(['equipment', 'template'])->get();
+        $items = $workOrder->items()->with(['equipment', 'template', 'inspection'])->get();
 
         return $this->success(WorkOrderItemResource::collection($items), 'Work order items retrieved successfully');
     }

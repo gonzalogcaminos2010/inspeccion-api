@@ -2030,6 +2030,69 @@
         }
       }
     },
+    "/inspections/{id}/sign": {
+      "post": {
+        "tags": ["Inspections"],
+        "summary": "Sign inspection",
+        "description": "Record a signature (inspector, supervisor, or client) for a completed inspection. The signature is a base64-encoded PNG image from a signature canvas. Inspector must be the assigned inspector. Supervisor must have supervisor or admin role. Client signature can be recorded by any authenticated user (inspector lends device). Each role can only sign once.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["role", "signature"],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": ["inspector", "supervisor", "client"],
+                    "description": "Who is signing"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "Base64-encoded PNG image of the signature (optionally with data:image/png;base64, prefix)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signature recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Inspection" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "description": "Unauthorized to sign with the specified role" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Inspection not completed, signature already exists, or invalid data",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/findings": {
       "get": {
         "tags": ["Findings"],
@@ -2593,7 +2656,14 @@
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/User" }],
             "description": "Supervisor who approved the inspection. Included when loaded"
-          }
+          },
+          "inspector_signature": { "type": "string", "format": "uri", "nullable": true, "description": "URL to the inspector's signature PNG" },
+          "inspector_signed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "supervisor_signature": { "type": "string", "format": "uri", "nullable": true, "description": "URL to the supervisor's signature PNG" },
+          "supervisor_signed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "client_signature": { "type": "string", "format": "uri", "nullable": true, "description": "URL to the client's signature PNG" },
+          "client_signed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "all_signatures_complete": { "type": "boolean", "description": "True when all 3 signatures (inspector, supervisor, client) have been recorded" }
         }
       },
       "InspectionDetail": {

@@ -25,6 +25,12 @@ class Inspection extends Model
         'completed_at',
         'approved_at',
         'supervisor_notes',
+        'inspector_signature',
+        'inspector_signed_at',
+        'supervisor_signature',
+        'supervisor_signed_at',
+        'client_signature',
+        'client_signed_at',
     ];
 
     protected function casts(): array
@@ -33,6 +39,9 @@ class Inspection extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'approved_at' => 'datetime',
+            'inspector_signed_at' => 'datetime',
+            'supervisor_signed_at' => 'datetime',
+            'client_signed_at' => 'datetime',
         ];
     }
 

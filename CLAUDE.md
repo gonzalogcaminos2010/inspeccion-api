@@ -13,6 +13,7 @@ Clients (mining companies) request inspections of their fleet vehicles. Admins c
 - **`project_state.md`** — Current implementation state, what has been verified, default credentials, and what remains to be done.
 - **`public/docs/api-docs.json`** — OpenAPI 3.0.0 specification (Swagger). All 54 endpoints with schemas.
 - **`public/docs/index.html`** — Swagger UI, accessible at `http://localhost:8000/docs/index.html`
+- **`frontend_reference.md`** — Frontend (Next.js) documentation: all screens, navigation, UI patterns, what's built vs missing, endpoints consumed.
 
 **Read these files first when resuming work on this project.**
 

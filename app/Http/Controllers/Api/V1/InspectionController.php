@@ -297,4 +297,55 @@ class InspectionController extends Controller
 
         return $this->success(new FindingResource($finding), 'Finding created successfully', 201);
     }
+
+    public function sign(Request $request, Inspection $inspection)
+    {
+        $validated = $request->validate([
+            'role' => 'required|string|in:inspector,supervisor,client',
+            'signature' => 'required|string',
+        ]);
+
+        $role = $validated['role'];
+
+        if ($inspection->status !== 'completed') {
+            return $this->error('Signatures can only be added to completed inspections.', 422);
+        }
+
+        $signatureField = $role.'_signature';
+        if ($inspection->{$signatureField}) {
+            return $this->error("The {$role} signature has already been recorded.", 422);
+        }
+
+        $user = $request->user();
+
+        if ($role === 'inspector' && $user->id !== $inspection->inspector_id) {
+            return $this->error('Only the assigned inspector can sign as inspector.', 403);
+        }
+
+        if ($role === 'supervisor' && ! in_array($user->role, ['supervisor', 'admin'])) {
+            return $this->error('Only supervisors or admins can sign as supervisor.', 403);
+        }
+
+        // Decode base64 and save PNG
+        $base64 = $validated['signature'];
+        $base64 = preg_replace('/^data:image\/\w+;base64,/', '', $base64);
+        $imageData = base64_decode($base64);
+
+        if ($imageData === false) {
+            return $this->error('Invalid base64 signature data.', 422);
+        }
+
+        $directory = 'signatures/'.$inspection->id;
+        $filename = $role.'.png';
+        Storage::disk('public')->put($directory.'/'.$filename, $imageData);
+
+        $inspection->update([
+            $signatureField => $directory.'/'.$filename,
+            $role.'_signed_at' => now(),
+        ]);
+
+        $inspection->load(['template', 'equipment', 'inspector', 'approver']);
+
+        return $this->success(new InspectionResource($inspection), ucfirst($role).' signature recorded successfully.');
+    }
 }
