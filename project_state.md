@@ -1,6 +1,6 @@
 # Project State - api-inspeccion
 
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 ## What Has Been Implemented
 
@@ -57,10 +57,19 @@ Last updated: 2026-03-17
 ### Phase 7: Code Quality
 - Laravel Pint formatting applied across codebase
 
-### Phase 8: API Documentation (Swagger)
+### Phase 8: PDF Report Generation
+- `barryvdh/laravel-dompdf` v3.1.2 installed
+- `InspectionReportController` with two endpoints:
+  - `GET /inspections/{id}/report` — generates final PDF (only for submitted/completed inspections)
+  - `GET /inspections/{id}/report/preview` — generates preview PDF with watermark (any status)
+- Blade template at `resources/views/reports/informe-preliminar.blade.php` (R3 PEAT 01 REV.07 format)
+- Includes: client/equipment data, inspection answers by section, findings, observations, supervisor notes, signatures
+- Logo placeholder at `public/images/logo-american-advisor.png` (replace with real logo)
+
+### Phase 9: API Documentation (Swagger)
 - OpenAPI 3.0.0 specification created at `public/docs/api-docs.json` (109KB)
 - Swagger UI served at `http://localhost:8000/docs/index.html` (CDN-based, no package dependency)
-- All 52 endpoints documented with request/response schemas
+- All 54+ endpoints documented with request/response schemas
 - 30+ component schemas (model resources, request bodies, enums)
 - 11 tag groups matching controller organization
 - Try-it-out enabled for interactive API testing
@@ -70,7 +79,7 @@ Last updated: 2026-03-17
 
 - All 18 migrations run successfully
 - Database seeder runs without errors (3 users + 1 template with 10 sections and 63 questions)
-- 55 routes registered (confirmed via `php artisan route:list`)
+- 57 routes registered (confirmed via `php artisan route:list`)
 - Code formatted with Laravel Pint
 - Swagger UI accessible at `http://localhost:8000/docs/index.html`
 
@@ -101,8 +110,8 @@ Last updated: 2026-03-17
 - Potential: notify admin when inspection is submitted, notify inspector when assigned to a work order.
 
 ### Reporting
-- **No PDF report generation.** No report templates or PDF library installed.
-- Potential: generate inspection report PDFs with results, photos, findings.
+- PDF report generation implemented (barryvdh/laravel-dompdf). Two endpoints: final report + preview.
+- Potential: add photo thumbnails in PDF, PDF download (vs stream), batch report generation.
 
 ### File Management
 - **No file cleanup/pruning for photos.** Deleted inspections leave orphaned files on disk.

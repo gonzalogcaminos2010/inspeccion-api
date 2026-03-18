@@ -2093,6 +2093,76 @@
         }
       }
     },
+    "/inspections/{id}/report": {
+      "get": {
+        "tags": ["Inspections"],
+        "summary": "Generate inspection PDF report",
+        "description": "Generates the 'Informe Preliminar de Inspección' (R3 PEAT 01 REV.07) as a PDF document. Only available for inspections with status 'submitted' or 'completed'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Inspection ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF document",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Inspection status is not submitted or completed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/{id}/report/preview": {
+      "get": {
+        "tags": ["Inspections"],
+        "summary": "Preview inspection PDF report",
+        "description": "Generates a preview PDF of the inspection report. Available for inspections in any status (including in_progress). Includes a 'PREVIEW' watermark.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Inspection ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF document (preview with watermark)",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/findings": {
       "get": {
         "tags": ["Findings"],

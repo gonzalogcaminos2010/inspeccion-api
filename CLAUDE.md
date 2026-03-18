@@ -20,14 +20,15 @@ Clients (mining companies) request inspections of their fleet vehicles. Admins c
 ## Current State (as of 2026-03-15)
 
 - All 18 migrations and seeders functional
-- 54 API routes registered across 11 controllers
+- 56 API routes registered across 12 controllers
 - 14 Eloquent models with relationships
 - 14 API Resource classes
 - Full inspection workflow: Request -> WorkOrder -> Inspection -> Answers -> Submit -> Supervisor Approve/Return (with auto-scoring)
 - Supervisor approval flow with CheckRole middleware (role:supervisor,admin)
 - Code formatted with Laravel Pint
 - Swagger UI documentation at `http://localhost:8000/docs/index.html`
-- **No automated tests, no FormRequest classes, no PDF reports**
+- PDF report generation with barryvdh/laravel-dompdf (report + preview endpoints)
+- **No automated tests, no FormRequest classes**
 
 ## Default Credentials
 

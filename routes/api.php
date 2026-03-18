@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EquipmentController;
 use App\Http\Controllers\Api\V1\FindingController;
 use App\Http\Controllers\Api\V1\InspectionController;
+use App\Http\Controllers\Api\V1\InspectionReportController;
 use App\Http\Controllers\Api\V1\InspectionRequestController;
 use App\Http\Controllers\Api\V1\InspectionTemplateController;
 use App\Http\Controllers\Api\V1\ServiceTypeController;
@@ -61,6 +62,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         ->middleware('role:supervisor,admin');
     Route::post('/inspections/{inspection}/return', [InspectionController::class, 'returnInspection'])
         ->middleware('role:supervisor,admin');
+    Route::get('/inspections/{inspection}/report', [InspectionReportController::class, 'show']);
+    Route::get('/inspections/{inspection}/report/preview', [InspectionReportController::class, 'preview']);
     Route::apiResource('inspections', InspectionController::class)->only(['index', 'show', 'store']);
 
     // Findings
