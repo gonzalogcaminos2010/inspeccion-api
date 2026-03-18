@@ -23,9 +23,9 @@ class InspectionReportController extends Controller
         $data = $this->prepareReportData($inspection);
 
         $overallResultLabel = match ($inspection->overall_result) {
-            'approved' => 'APROBADO',
-            'rejected' => 'NO APROBADO',
-            'conditionally_approved' => 'APROBADO CONDICIONALMENTE',
+            'approved' => 'FAVORABLE',
+            'rejected' => 'NO FAVORABLE',
+            'conditionally_approved' => 'FAVORABLE CON OBSERVACIONES',
             default => strtoupper($inspection->overall_result ?? 'N/A'),
         };
 
@@ -46,9 +46,9 @@ class InspectionReportController extends Controller
 
         // Calculate preliminary result without saving to DB
         $overallResultLabel = match ($inspection->overall_result) {
-            'approved' => 'APROBADO',
-            'rejected' => 'NO APROBADO',
-            'conditionally_approved' => 'APROBADO CONDICIONALMENTE',
+            'approved' => 'FAVORABLE',
+            'rejected' => 'NO FAVORABLE',
+            'conditionally_approved' => 'FAVORABLE CON OBSERVACIONES',
             default => null,
         };
 
@@ -59,7 +59,7 @@ class InspectionReportController extends Controller
             } elseif ($hasFlagged) {
                 $overallResultLabel = 'PENDIENTE DE REVISIÓN';
             } else {
-                $overallResultLabel = 'APROBADO (preliminar)';
+                $overallResultLabel = 'FAVORABLE (preliminar)';
             }
         }
 

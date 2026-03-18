@@ -21,8 +21,16 @@ class Equipment extends Model
         'plate',
         'serial_number',
         'internal_code',
+        'metadata',
         'status',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'metadata' => 'array',
+        ];
+    }
 
     public function client(): BelongsTo
     {

@@ -2515,6 +2515,20 @@
           "plate": { "type": "string", "nullable": true, "example": "ABC-123" },
           "serial_number": { "type": "string", "nullable": true, "example": "CAT390F2022001" },
           "internal_code": { "type": "string", "nullable": true, "example": "EXC-001" },
+          "metadata": {
+            "type": "object",
+            "nullable": true,
+            "description": "Dynamic fields specific to equipment type (e.g., estructura_dimensiones, capacidad_max_perforacion, estacion_de_control, clave, oblea, normas_referencia, proxima_inspeccion)",
+            "example": {
+              "estructura_dimensiones": "3038x65A6x4401",
+              "capacidad_max_perforacion": "200m",
+              "estacion_de_control": "Remoto-Remoto",
+              "clave": "2024-4899",
+              "oblea": "EOPHAI 3380",
+              "normas_referencia": "PE ATI 03 Procedimiento Especial para la Inspección de equipos especiales.\nIE ATI 18 Instructivo Especial de Inspección y Evaluación de Defectos. PERFORADORA.",
+              "proxima_inspeccion": "18-3-2027"
+            }
+          },
           "status": { "type": "string", "nullable": true, "example": "active" },
           "created_at": { "type": "string", "format": "date-time" },
           "client": {
@@ -2908,6 +2922,7 @@
           "plate": { "type": "string", "maxLength": 50, "nullable": true, "example": "ABC-123" },
           "serial_number": { "type": "string", "maxLength": 100, "nullable": true, "example": "CAT390F2022001" },
           "internal_code": { "type": "string", "maxLength": 100, "nullable": true, "example": "EXC-001" },
+          "metadata": { "type": "object", "nullable": true, "description": "Dynamic fields specific to equipment type" },
           "status": { "type": "string", "maxLength": 50, "nullable": true, "example": "active" }
         }
       },
@@ -2923,6 +2938,7 @@
           "plate": { "type": "string", "maxLength": 50, "nullable": true },
           "serial_number": { "type": "string", "maxLength": 100, "nullable": true },
           "internal_code": { "type": "string", "maxLength": 100, "nullable": true },
+          "metadata": { "type": "object", "nullable": true, "description": "Dynamic fields specific to equipment type" },
           "status": { "type": "string", "maxLength": 50, "nullable": true }
         }
       },

@@ -57,6 +57,7 @@ class EquipmentController extends Controller
             'plate' => 'nullable|string|max:50',
             'serial_number' => 'nullable|string|max:100',
             'internal_code' => 'nullable|string|max:100',
+            'metadata' => 'nullable|array',
             'status' => 'nullable|string|max:50',
         ]);
 
@@ -84,6 +85,7 @@ class EquipmentController extends Controller
             'plate' => 'nullable|string|max:50',
             'serial_number' => 'nullable|string|max:100',
             'internal_code' => 'nullable|string|max:100',
+            'metadata' => 'nullable|array',
             'status' => 'nullable|string|max:50',
         ]);
 
