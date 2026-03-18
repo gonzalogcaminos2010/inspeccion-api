@@ -20,41 +20,7 @@ class InspectionReportController extends Controller
             );
         }
 
-        $inspection->load([
-            'template.sections.questions',
-            'inspector',
-            'equipment.client',
-            'workOrderItem.workOrder.inspectionRequest.client',
-            'answers.question.section',
-            'findings',
-            'approver',
-        ]);
-
-        $client = $inspection->equipment->client
-            ?? $inspection->workOrderItem?->workOrder?->inspectionRequest?->client;
-
-        $equipment = $inspection->equipment;
-        $inspector = $inspection->inspector;
-        $template = $inspection->template;
-
-        // Build signature absolute paths for DomPDF
-        $signatures = [];
-        foreach (['inspector', 'supervisor', 'client'] as $role) {
-            $field = $role.'_signature';
-            if ($inspection->{$field}) {
-                $path = storage_path('app/public/'.$inspection->{$field});
-                if (file_exists($path)) {
-                    $signatures[$role] = $path;
-                }
-            }
-        }
-
-        // Group answers by section
-        $answersBySection = [];
-        foreach ($inspection->answers as $answer) {
-            $sectionName = $answer->question?->section?->name ?? 'General';
-            $answersBySection[$sectionName][] = $answer;
-        }
+        $data = $this->prepareReportData($inspection);
 
         $overallResultLabel = match ($inspection->overall_result) {
             'approved' => 'APROBADO',
@@ -64,61 +30,19 @@ class InspectionReportController extends Controller
         };
 
         $pdf = Pdf::loadView('reports.informe-preliminar', [
-            'inspection' => $inspection,
-            'client' => $client,
-            'equipment' => $equipment,
-            'inspector' => $inspector,
-            'template' => $template,
-            'signatures' => $signatures,
-            'answersBySection' => $answersBySection,
+            ...$data,
             'overallResultLabel' => $overallResultLabel,
             'isPreview' => false,
         ]);
 
         $pdf->setPaper('A4', 'portrait');
 
-        $filename = 'informe-preliminar-'.$inspection->id.'.pdf';
-
-        return $pdf->stream($filename);
+        return $pdf->stream('informe-preliminar-'.$inspection->id.'.pdf');
     }
 
     public function preview(Inspection $inspection)
     {
-        $inspection->load([
-            'template.sections.questions',
-            'inspector',
-            'equipment.client',
-            'workOrderItem.workOrder.inspectionRequest.client',
-            'answers.question.section',
-            'findings',
-            'approver',
-        ]);
-
-        $client = $inspection->equipment->client
-            ?? $inspection->workOrderItem?->workOrder?->inspectionRequest?->client;
-
-        $equipment = $inspection->equipment;
-        $inspector = $inspection->inspector;
-        $template = $inspection->template;
-
-        // Build signature absolute paths for DomPDF
-        $signatures = [];
-        foreach (['inspector', 'supervisor', 'client'] as $role) {
-            $field = $role.'_signature';
-            if ($inspection->{$field}) {
-                $path = storage_path('app/public/'.$inspection->{$field});
-                if (file_exists($path)) {
-                    $signatures[$role] = $path;
-                }
-            }
-        }
-
-        // Group answers by section
-        $answersBySection = [];
-        foreach ($inspection->answers as $answer) {
-            $sectionName = $answer->question?->section?->name ?? 'General';
-            $answersBySection[$sectionName][] = $answer;
-        }
+        $data = $this->prepareReportData($inspection);
 
         // Calculate preliminary result without saving to DB
         $overallResultLabel = match ($inspection->overall_result) {
@@ -140,21 +64,58 @@ class InspectionReportController extends Controller
         }
 
         $pdf = Pdf::loadView('reports.informe-preliminar', [
-            'inspection' => $inspection,
-            'client' => $client,
-            'equipment' => $equipment,
-            'inspector' => $inspector,
-            'template' => $template,
-            'signatures' => $signatures,
-            'answersBySection' => $answersBySection,
+            ...$data,
             'overallResultLabel' => $overallResultLabel,
             'isPreview' => true,
         ]);
 
         $pdf->setPaper('A4', 'portrait');
 
-        $filename = 'preview-informe-'.$inspection->id.'.pdf';
+        return $pdf->stream('preview-informe-'.$inspection->id.'.pdf');
+    }
 
-        return $pdf->stream($filename);
+    private function prepareReportData(Inspection $inspection): array
+    {
+        $inspection->load([
+            'template.sections.questions',
+            'inspector',
+            'equipment.client',
+            'workOrderItem.workOrder.inspectionRequest.client',
+            'answers.question.section',
+            'findings',
+            'approver',
+        ]);
+
+        $client = $inspection->equipment?->client
+            ?? $inspection->workOrderItem?->workOrder?->inspectionRequest?->client;
+
+        // Build signature absolute paths for DomPDF
+        $signatures = [];
+        foreach (['inspector', 'supervisor', 'client'] as $role) {
+            $field = $role.'_signature';
+            if ($inspection->{$field}) {
+                $path = storage_path('app/public/'.$inspection->{$field});
+                if (file_exists($path)) {
+                    $signatures[$role] = $path;
+                }
+            }
+        }
+
+        // Group answers by section
+        $answersBySection = [];
+        foreach ($inspection->answers as $answer) {
+            $sectionName = $answer->question?->section?->name ?? 'General';
+            $answersBySection[$sectionName][] = $answer;
+        }
+
+        return [
+            'inspection' => $inspection,
+            'client' => $client,
+            'equipment' => $inspection->equipment,
+            'inspector' => $inspection->inspector,
+            'template' => $inspection->template,
+            'signatures' => $signatures,
+            'answersBySection' => $answersBySection,
+        ];
     }
 }
