@@ -12,7 +12,7 @@ Last updated: 2026-03-18
 
 ### Phase 2: Core Models & Migrations (14 domain tables)
 - Client (mining companies)
-- Equipment (vehicles belonging to clients)
+- Equipment (vehicles belonging to clients, with `metadata` JSON field for dynamic type-specific fields)
 - ServiceType (types of inspection services)
 - InspectionRequest (requests from clients, auto-numbered REQ-YYYYMMDD-XXXX)
 - InspectionTemplate / TemplateSection / TemplateQuestion (configurable inspection forms)
@@ -24,7 +24,7 @@ Last updated: 2026-03-18
 - UserController: index, store
 - DashboardController: stats (counts + recent inspections)
 - ClientController: full CRUD
-- EquipmentController: full CRUD
+- EquipmentController: full CRUD (accepts `metadata` JSON field)
 - ServiceTypeController: full CRUD
 - InspectionRequestController: full CRUD
 - InspectionTemplateController: full CRUD + duplicate
