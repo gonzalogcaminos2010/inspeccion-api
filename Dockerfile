@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY composer.json composer.lock ./
 
+# Force rebuild: dompdf added 2026-03-19
 RUN composer install \
     --no-dev \
     --no-interaction \
