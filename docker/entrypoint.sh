@@ -43,15 +43,21 @@ if [ "$DB_CONNECTION" = "mysql" ] && [ -n "$DB_HOST" ]; then
     echo "✅ MySQL is ready!"
 fi
 
-# Ensure all composer dependencies are installed
-echo "📦 Installing dependencies..."
-if [ -f /usr/local/bin/composer ]; then
-    composer install --no-dev --no-interaction --optimize-autoloader
-else
+# Ensure composer is available and install dompdf if missing
+echo "📦 Checking dependencies..."
+if [ ! -f /usr/local/bin/composer ]; then
     php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
     php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
     rm /tmp/composer-setup.php
-    composer install --no-dev --no-interaction --optimize-autoloader
+fi
+
+# Force install dompdf if not present (Docker build cache may have skipped it)
+if [ ! -d /var/www/html/vendor/barryvdh/laravel-dompdf ]; then
+    echo "📦 Installing barryvdh/laravel-dompdf..."
+    cd /var/www/html
+    composer require barryvdh/laravel-dompdf --no-interaction --optimize-autoloader
+else
+    echo "✅ dompdf already installed"
 fi
 
 # Cache routes and views (NOT config - env vars come from EasyPanel)
