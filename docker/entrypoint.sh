@@ -43,6 +43,17 @@ if [ "$DB_CONNECTION" = "mysql" ] && [ -n "$DB_HOST" ]; then
     echo "✅ MySQL is ready!"
 fi
 
+# Ensure all composer dependencies are installed
+echo "📦 Installing dependencies..."
+if [ -f /usr/local/bin/composer ]; then
+    composer install --no-dev --no-interaction --optimize-autoloader
+else
+    php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
+    php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+    rm /tmp/composer-setup.php
+    composer install --no-dev --no-interaction --optimize-autoloader
+fi
+
 # Cache routes and views (NOT config - env vars come from EasyPanel)
 echo "⚡ Caching routes and views..."
 php artisan route:cache
