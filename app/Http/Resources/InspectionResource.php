@@ -39,6 +39,9 @@ class InspectionResource extends JsonResource
             'supervisor_signed_at' => $this->supervisor_signed_at,
             'client_signature' => $this->client_signature ? asset('storage/'.$this->client_signature) : null,
             'client_signed_at' => $this->client_signed_at,
+            'certificate_number' => $this->certificate_number,
+            'certificate_issued_at' => $this->certificate_issued_at,
+            'qr_token' => $this->qr_token,
             'all_signatures_complete' => $this->inspector_signature && $this->supervisor_signature && $this->client_signature,
         ];
     }

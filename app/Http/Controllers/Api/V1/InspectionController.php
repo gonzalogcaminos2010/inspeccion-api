@@ -13,6 +13,7 @@ use App\Models\WorkOrderItem;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class InspectionController extends Controller
 {
@@ -200,6 +201,13 @@ class InspectionController extends Controller
             'completed_at' => now(),
             'supervisor_notes' => $validated['supervisor_notes'] ?? null,
             'overall_result' => $validated['final_result'] ?? $inspection->overall_result,
+        ]);
+
+        // Generate certificate
+        $inspection->update([
+            'certificate_number' => Inspection::generateCertificateNumber(),
+            'certificate_issued_at' => now(),
+            'qr_token' => Str::uuid()->toString(),
         ]);
 
         // Now mark the work order item as completed

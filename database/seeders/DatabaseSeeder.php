@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             InspectionTemplateSeeder::class,
+            LenorGruaArticuladaTemplateSeeder::class,
         ]);
     }
 }

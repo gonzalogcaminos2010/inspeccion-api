@@ -1,6 +1,6 @@
 # Project State - api-inspeccion
 
-Last updated: 2026-03-18
+Last updated: 2026-03-20
 
 ## What Has Been Implemented
 
@@ -53,6 +53,7 @@ Last updated: 2026-03-18
 ### Phase 6: Seeders
 - DatabaseSeeder creates 3 users (admin + supervisor + inspector)
 - InspectionTemplateSeeder creates a complete mining 4x4 inspection template with 10 sections, 63 questions
+- LenorGruaArticuladaTemplateSeeder creates a LENOR articulated boom crane template with 20 sections, ~100 questions (code: INSP-GRUA-ART)
 
 ### Phase 7: Code Quality
 - Laravel Pint formatting applied across codebase
@@ -66,7 +67,17 @@ Last updated: 2026-03-18
 - Includes: client/equipment data, inspection answers by section, findings, observations, supervisor notes, signatures
 - Logo placeholder at `public/images/logo-american-advisor.png` (replace with real logo)
 
-### Phase 9: API Documentation (Swagger)
+### Phase 9: Certificate PDF + QR Verification
+- Certificate auto-generated on supervisor approval: `certificate_number` (CERT-YYYYMMDD-XXXX), `certificate_issued_at`, `qr_token` (UUID)
+- Migration adds 3 columns to `inspections` table
+- `GET /inspections/{id}/certificate` — generates landscape A4 certificate PDF with embedded QR code (auth required, completed only)
+- `GET /api/v1/public/inspections/{qrToken}` — public endpoint for certificate verification via QR scan (no auth)
+- QR code generated with `chillerlan/php-qrcode` v6 (GD image PNG, base64 embedded in PDF)
+- Certificate Blade template at `resources/views/reports/certificado-inspeccion.blade.php` (LENOR-style format)
+- `barryvdh/laravel-dompdf` moved from require-dev to require (production dependency)
+- LENOR crane template seeder: `LenorGruaArticuladaTemplateSeeder` — 20 sections, ~100 questions for articulated boom crane inspection (code: INSP-GRUA-ART)
+
+### Phase 10: API Documentation (Swagger)
 - OpenAPI 3.0.0 specification created at `public/docs/api-docs.json` (109KB)
 - Swagger UI served at `http://localhost:8000/docs/index.html` (CDN-based, no package dependency)
 - All 54+ endpoints documented with request/response schemas
@@ -77,9 +88,9 @@ Last updated: 2026-03-18
 
 ## What Has Been Verified
 
-- All 18 migrations run successfully
-- Database seeder runs without errors (3 users + 1 template with 10 sections and 63 questions)
-- 57 routes registered (confirmed via `php artisan route:list`)
+- All 19 migrations run successfully
+- Database seeder runs without errors (3 users + 2 templates: mining 4x4 with 10 sections/63 questions + LENOR crane with 20 sections/~100 questions)
+- 59 routes registered (confirmed via `php artisan route:list`)
 - Code formatted with Laravel Pint
 - Swagger UI accessible at `http://localhost:8000/docs/index.html`
 
@@ -128,6 +139,9 @@ Last updated: 2026-03-18
 - Swagger UI at `http://localhost:8000/docs/index.html`
 - The spec is manually maintained (not auto-generated). When adding/modifying endpoints, update `api-docs.json` manually.
 - Potential improvement: install `dedoc/scramble` for auto-generated docs from code annotations.
+
+### Decisions & Investigations Log
+- **"Solicitado por" field (2026-03-19):** Frontend had a text input for "Solicitado por" in the inspection request form. Investigation confirmed backend already handles this automatically — `created_by` FK is set to `$request->user()->id` on creation, and `InspectionRequestResource` returns `creator` (UserResource) when the relation is loaded. **No backend changes needed.** Frontend team notified to remove the text field and display the logged-in user's name as read-only.
 
 ### Other Potential Improvements
 - Soft deletes on key models (clients, equipment, inspections)

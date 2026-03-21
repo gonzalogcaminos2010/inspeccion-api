@@ -31,6 +31,9 @@ class Inspection extends Model
         'supervisor_signed_at',
         'client_signature',
         'client_signed_at',
+        'certificate_number',
+        'certificate_issued_at',
+        'qr_token',
     ];
 
     protected function casts(): array
@@ -42,6 +45,7 @@ class Inspection extends Model
             'inspector_signed_at' => 'datetime',
             'supervisor_signed_at' => 'datetime',
             'client_signed_at' => 'datetime',
+            'certificate_issued_at' => 'datetime',
         ];
     }
 
@@ -83,5 +87,16 @@ class Inspection extends Model
     public function findings(): HasMany
     {
         return $this->hasMany(Finding::class);
+    }
+
+    public static function generateCertificateNumber(): string
+    {
+        $date = now()->format('Ymd');
+        $last = static::where('certificate_number', 'like', "CERT-{$date}-%")
+            ->orderByDesc('certificate_number')
+            ->value('certificate_number');
+        $seq = $last ? (int) substr($last, -4) + 1 : 1;
+
+        return sprintf('CERT-%s-%04d', $date, $seq);
     }
 }

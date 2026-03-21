@@ -2163,6 +2163,100 @@
         }
       }
     },
+    "/inspections/{id}/certificate": {
+      "get": {
+        "tags": ["Inspections"],
+        "summary": "Generate certificate PDF",
+        "description": "Generates a landscape A4 certificate PDF with embedded QR code for completed inspections that have a certificate number (issued on supervisor approval).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF stream",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Inspection not completed or no certificate issued"
+          }
+        }
+      }
+    },
+    "/public/inspections/{qrToken}": {
+      "get": {
+        "tags": ["Inspections"],
+        "summary": "Verify certificate (public)",
+        "description": "Public endpoint (no auth required). Returns inspection summary for certificate verification by QR token.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "qrToken",
+            "in": "path",
+            "required": true,
+            "description": "The QR token UUID from the inspection certificate",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate verification data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Certificate verified successfully." },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "certificate_number": { "type": "string", "example": "CERT-20260320-0001" },
+                        "certificate_issued_at": { "type": "string", "format": "date-time" },
+                        "status": { "type": "string", "example": "completed" },
+                        "overall_result": { "type": "string", "example": "approved" },
+                        "score": { "type": "integer", "example": 95 },
+                        "equipment": {
+                          "type": "object",
+                          "properties": {
+                            "name": { "type": "string" },
+                            "brand": { "type": "string" },
+                            "model": { "type": "string" },
+                            "serial_number": { "type": "string" },
+                            "year": { "type": "integer" },
+                            "internal_code": { "type": "string" }
+                          }
+                        },
+                        "template": { "type": "string" },
+                        "inspector": { "type": "string" },
+                        "approved_by": { "type": "string" },
+                        "approved_at": { "type": "string", "format": "date-time" },
+                        "completed_at": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Certificate not found or inspection not completed"
+          }
+        }
+      }
+    },
     "/findings": {
       "get": {
         "tags": ["Findings"],
@@ -2747,6 +2841,9 @@
           "supervisor_signed_at": { "type": "string", "format": "date-time", "nullable": true },
           "client_signature": { "type": "string", "format": "uri", "nullable": true, "description": "URL to the client's signature PNG" },
           "client_signed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "certificate_number": { "type": "string", "nullable": true, "example": "CERT-20260320-0001", "description": "Auto-generated on supervisor approval" },
+          "certificate_issued_at": { "type": "string", "format": "date-time", "nullable": true, "description": "Timestamp when certificate was issued" },
+          "qr_token": { "type": "string", "format": "uuid", "nullable": true, "description": "UUID token for public QR verification" },
           "all_signatures_complete": { "type": "boolean", "description": "True when all 3 signatures (inspector, supervisor, client) have been recorded" }
         }
       },

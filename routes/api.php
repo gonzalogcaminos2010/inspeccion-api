@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\InspectionController;
 use App\Http\Controllers\Api\V1\InspectionReportController;
 use App\Http\Controllers\Api\V1\InspectionRequestController;
 use App\Http\Controllers\Api\V1\InspectionTemplateController;
+use App\Http\Controllers\Api\V1\PublicInspectionController;
 use App\Http\Controllers\Api\V1\ServiceTypeController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkOrderController;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/v1/login', [AuthController::class, 'login']);
+Route::get('/v1/public/inspections/{qrToken}', [PublicInspectionController::class, 'show']);
 
 // Protected routes
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
@@ -64,6 +66,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         ->middleware('role:supervisor,admin');
     Route::get('/inspections/{inspection}/report', [InspectionReportController::class, 'show']);
     Route::get('/inspections/{inspection}/report/preview', [InspectionReportController::class, 'preview']);
+    Route::get('/inspections/{inspection}/certificate', [InspectionReportController::class, 'certificate']);
     Route::apiResource('inspections', InspectionController::class)->only(['index', 'show', 'store']);
 
     // Findings
