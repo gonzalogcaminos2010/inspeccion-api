@@ -17,7 +17,7 @@ class WorkOrderController extends Controller
     public function index(Request $request)
     {
         $query = WorkOrder::query()
-            ->with(['inspectionRequest', 'inspector']);
+            ->with(['inspectionRequest.client', 'inspector', 'items.equipment', 'items.template']);
 
         if ($search = $request->query('search')) {
             $query->where('order_number', 'like', "%{$search}%");
@@ -83,7 +83,7 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template', 'items.inspection']);
+        $workOrder->load(['inspectionRequest.client', 'inspector', 'items.equipment', 'items.template', 'items.inspection']);
 
         return $this->success(new WorkOrderResource($workOrder));
     }
