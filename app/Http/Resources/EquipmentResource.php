@@ -20,6 +20,7 @@ class EquipmentResource extends JsonResource
             'plate' => $this->plate,
             'serial_number' => $this->serial_number,
             'internal_code' => $this->internal_code,
+            'equipment_code' => $this->internal_code,
             'metadata' => $this->metadata,
             'status' => $this->status,
             'created_at' => $this->created_at,

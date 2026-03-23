@@ -15,12 +15,16 @@ class WorkOrderItemResource extends JsonResource
             'equipment_id' => $this->equipment_id,
             'template_id' => $this->inspection_template_id,
             'inspection_template_id' => $this->inspection_template_id,
+            'inspector_id' => $this->inspector_id,
             'status' => $this->status,
+            'sequence' => $this->sequence ?? 0,
             'notes' => $this->notes,
+            'completed_at' => $this->completed_at,
             'order_number' => $this->whenLoaded('workOrder', fn () => $this->workOrder->order_number),
             'equipment' => new EquipmentResource($this->whenLoaded('equipment')),
             'template' => new InspectionTemplateResource($this->whenLoaded('template')),
             'inspection' => new InspectionResource($this->whenLoaded('inspection')),
+            'inspector' => new UserResource($this->whenLoaded('inspector')),
         ];
     }
 }

@@ -21,6 +21,7 @@ class InspectionAnswerResource extends JsonResource
             'answer_json' => $this->answer_json,
             'is_flagged' => $this->is_flagged,
             'notes' => $this->notes,
+            'answered_at' => $this->created_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'question' => new TemplateQuestionResource($this->whenLoaded('question')),

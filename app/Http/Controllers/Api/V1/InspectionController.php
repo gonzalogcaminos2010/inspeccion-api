@@ -136,7 +136,7 @@ class InspectionController extends Controller
         );
     }
 
-    public function submit(Inspection $inspection)
+    public function submit(Request $request, Inspection $inspection)
     {
         if (! in_array($inspection->status, ['in_progress', 'returned'])) {
             return $this->error('Inspection can only be submitted from in_progress or returned status.', 422);
@@ -163,12 +163,19 @@ class InspectionController extends Controller
             $score = 100;
         }
 
-        $inspection->update([
+        $updateData = [
             'status' => 'submitted',
             'overall_result' => $overallResult,
             'score' => $score,
             'supervisor_notes' => null,
-        ]);
+        ];
+
+        // Accept optional notes/observations from Flutter
+        if ($request->filled('notes')) {
+            $updateData['observations'] = $request->input('notes');
+        }
+
+        $inspection->update($updateData);
 
         $inspection->load([
             'template.sections.questions',
@@ -266,6 +273,7 @@ class InspectionController extends Controller
             'photos' => 'required|array|min:1',
             'photos.*.file' => 'required|image|max:5120',
             'photos.*.template_question_id' => 'nullable|exists:template_questions,id',
+            'photos.*.answer_id' => 'nullable|exists:template_questions,id',
             'photos.*.finding_id' => 'nullable|exists:findings,id',
             'photos.*.caption' => 'nullable|string|max:500',
         ]);
@@ -277,7 +285,7 @@ class InspectionController extends Controller
 
             $photo = $inspection->photos()->create([
                 'photo_path' => $path,
-                'template_question_id' => $photoData['template_question_id'] ?? null,
+                'template_question_id' => $photoData['template_question_id'] ?? $photoData['answer_id'] ?? null,
                 'finding_id' => $photoData['finding_id'] ?? null,
                 'caption' => $photoData['caption'] ?? null,
             ]);
@@ -296,12 +304,20 @@ class InspectionController extends Controller
     {
         $validated = $request->validate([
             'severity' => 'required|string',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
+            'title' => 'nullable|string',
             'recommendation' => 'nullable|string',
+            'corrective_action' => 'nullable|string',
             'template_question_id' => 'nullable|exists:template_questions,id',
+            'answer_id' => 'nullable|exists:template_questions,id',
         ]);
 
-        $finding = $inspection->findings()->create($validated);
+        $finding = $inspection->findings()->create([
+            'severity' => $validated['severity'],
+            'description' => $validated['description'] ?? $validated['title'] ?? '',
+            'recommendation' => $validated['recommendation'] ?? $validated['corrective_action'] ?? null,
+            'template_question_id' => $validated['template_question_id'] ?? $validated['answer_id'] ?? null,
+        ]);
 
         return $this->success(new FindingResource($finding), 'Finding created successfully', 201);
     }

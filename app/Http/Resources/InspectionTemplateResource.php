@@ -22,6 +22,10 @@ class InspectionTemplateResource extends JsonResource
             'updated_at' => $this->updated_at,
             'sections' => TemplateSectionResource::collection($this->whenLoaded('sections')),
             'sections_count' => $this->whenCounted('sections'),
+            'questions_count' => $this->when(
+                $this->relationLoaded('sections'),
+                fn () => $this->sections->sum(fn ($s) => $s->questions ? $s->questions->count() : 0)
+            ),
         ];
     }
 }
