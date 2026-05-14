@@ -60,6 +60,10 @@ else
     echo "✅ dompdf already installed"
 fi
 
+# Create storage symlink for public file access
+echo "🔗 Creating storage symlink..."
+php artisan storage:link --force
+
 # Cache routes and views (NOT config - env vars come from EasyPanel)
 echo "⚡ Caching routes and views..."
 php artisan route:cache

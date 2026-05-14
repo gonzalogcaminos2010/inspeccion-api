@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -47,5 +48,17 @@ class UserController extends Controller
         $user = User::create($validated);
 
         return $this->success(new UserResource($user), 'User created successfully', 201);
+    }
+
+    public function resetPassword(Request $request, User $user)
+    {
+        $request->validate([
+            'new_password' => 'required|string|min:8|confirmed',
+            'new_password_confirmation' => 'required|string',
+        ]);
+
+        $user->update(['password' => Hash::make($request->new_password)]);
+
+        return $this->success(null, 'Contraseña actualizada exitosamente');
     }
 }

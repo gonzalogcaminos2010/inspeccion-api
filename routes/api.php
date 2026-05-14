@@ -24,10 +24,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
 
     // Users
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{user}/password', [UserController::class, 'resetPassword'])->middleware('role:admin');
 
     // Dashboard
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);

@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -42,5 +43,22 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return $this->success(new UserResource($request->user()));
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+            'new_password_confirmation' => 'required|string',
+        ]);
+
+        if (! Hash::check($request->current_password, $request->user()->password)) {
+            return $this->error('La contraseña actual es incorrecta', 422);
+        }
+
+        $request->user()->update(['password' => Hash::make($request->new_password)]);
+
+        return $this->success(null, 'Contraseña actualizada exitosamente');
     }
 }
