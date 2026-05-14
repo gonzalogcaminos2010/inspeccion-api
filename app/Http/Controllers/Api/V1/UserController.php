@@ -50,6 +50,25 @@ class UserController extends Controller
         return $this->success(new UserResource($user), 'User created successfully', 201);
     }
 
+    public function show(User $user)
+    {
+        return $this->success(new UserResource($user));
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,'.$user->id,
+            'role' => 'sometimes|string|in:supervisor,inspector',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $user->update($validated);
+
+        return $this->success(new UserResource($user->fresh()), 'Usuario actualizado exitosamente');
+    }
+
     public function resetPassword(Request $request, User $user)
     {
         $request->validate([

@@ -29,6 +29,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Users
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
+    Route::get('/users/{user}', [UserController::class, 'show'])->middleware('role:admin');
+    Route::put('/users/{user}', [UserController::class, 'update'])->middleware('role:admin');
     Route::put('/users/{user}/password', [UserController::class, 'resetPassword'])->middleware('role:admin');
 
     // Dashboard

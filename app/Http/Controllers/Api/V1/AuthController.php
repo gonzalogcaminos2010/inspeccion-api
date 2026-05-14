@@ -25,6 +25,12 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        if (! $user->is_active) {
+            Auth::logout();
+
+            return $this->error('Tu cuenta está desactivada', 403);
+        }
         $token = $user->createToken('api-token')->plainTextToken;
 
         return $this->success([
