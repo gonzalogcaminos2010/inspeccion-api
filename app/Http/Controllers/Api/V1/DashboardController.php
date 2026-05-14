@@ -23,9 +23,9 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        $approvedCount = Inspection::where('final_result', 'approved')->count();
-        $conditionallyApprovedCount = Inspection::where('final_result', 'conditionally_approved')->count();
-        $rejectedCount = Inspection::where('final_result', 'rejected')->count();
+        $approvedCount = Inspection::where('overall_result', 'approved')->count();
+        $conditionallyApprovedCount = Inspection::where('overall_result', 'conditionally_approved')->count();
+        $rejectedCount = Inspection::where('overall_result', 'rejected')->count();
         $totalWithResult = $approvedCount + $conditionallyApprovedCount + $rejectedCount;
 
         $inspectionsByMonth = collect();
@@ -33,13 +33,13 @@ class DashboardController extends Controller
             $date = Carbon::now()->subMonths($i);
             $monthRows = Inspection::whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
-                ->get(['final_result']);
+                ->get(['overall_result']);
 
             $inspectionsByMonth->push([
                 'month' => $date->format('Y-m'),
                 'count' => $monthRows->count(),
-                'approved' => $monthRows->where('final_result', 'approved')->count(),
-                'rejected' => $monthRows->where('final_result', 'rejected')->count(),
+                'approved' => $monthRows->where('overall_result', 'approved')->count(),
+                'rejected' => $monthRows->where('overall_result', 'rejected')->count(),
             ]);
         }
 
