@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AiAnalysisController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -83,4 +84,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Findings
     Route::apiResource('findings', FindingController::class);
+
+    // AI Photo Analysis
+    Route::post('/ai/analyze-photo', [AiAnalysisController::class, 'analyzePhoto']);
+    Route::patch('/ai/analyses/{aiAnalysis}/mark-used', [AiAnalysisController::class, 'markUsed']);
 });

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'photo_analysis_enabled' => env('AI_PHOTO_ANALYSIS_ENABLED', true),
+        'model' => env('AI_PHOTO_ANALYSIS_MODEL', 'claude-sonnet-4-6'),
+    ],
+
 ];

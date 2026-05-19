@@ -1,6 +1,6 @@
 # Project State - api-inspeccion
 
-Last updated: 2026-05-19
+Last updated: 2026-05-19 (Phase 13)
 
 ## What Has Been Implemented
 
@@ -155,6 +155,16 @@ Last updated: 2026-05-19
 - Only the owning inspector (`inspector_id === user.id`) can reopen — supervisor/admin cannot
 - Allowed source states: `submitted`, `returned`. Other states → 409
 - Effect: `status = in_progress`, `completed_at = null`. Answers/findings/photos preserved.
+
+### Phase 13: AI Photo Analysis — Asistencia IA RI-03 fase 1 (2026-05-19)
+- New `ai_analyses` table: `id`, `photo_id` FK, `inspection_id` FK (denorm), `requested_by_user_id` FK, `model`, `prompt_version`, `response_json`, `has_defect`, `severity`, `used_by_user`, `latency_ms`, timestamps. Index on (inspection_id, created_at).
+- `POST /api/v1/ai/analyze-photo` — body `{ photo_id }`. Reads photo from disk `public`, base64-encodes, calls Anthropic Messages API with vision (model `claude-sonnet-4-6` by default). System + user prompts in Spanish, requesting strict JSON output: `{ has_defect, title, description, severity, defect_type, observations }`. Retries once on malformed JSON; 502 if both attempts fail.
+- `PATCH /api/v1/ai/analyses/{id}/mark-used` — body empty. Only the requester can mark used. Returns 204.
+- Service `App\Services\Ai\PhotoAnalysisService` encapsulates the Anthropic call + retry + JSON extraction. Latency measured via `microtime`.
+- Config in `config/services.php` → `anthropic.api_key`, `anthropic.photo_analysis_enabled`, `anthropic.model`. Env vars: `ANTHROPIC_API_KEY`, `AI_PHOTO_ANALYSIS_ENABLED`, `AI_PHOTO_ANALYSIS_MODEL`.
+- Permission rules: admin/supervisor analyze any photo; inspector only photos of inspections they are assigned to.
+- Limits: photo >10MB → 422. Disabled flag or missing API key → 503.
+- 12 Pest tests covering all spec cases (in `tests/Feature/AiAnalysisTest.php`).
 
 ### Decisions & Investigations Log
 - **"Solicitado por" field (2026-03-19):** Frontend had a text input for "Solicitado por" in the inspection request form. Investigation confirmed backend already handles this automatically — `created_by` FK is set to `$request->user()->id` on creation, and `InspectionRequestResource` returns `creator` (UserResource) when the relation is loaded. **No backend changes needed.** Frontend team notified to remove the text field and display the logged-in user's name as read-only.
