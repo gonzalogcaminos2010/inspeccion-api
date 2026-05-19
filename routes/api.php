@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\InspectionRequestController;
 use App\Http\Controllers\Api\V1\InspectionTemplateController;
 use App\Http\Controllers\Api\V1\PublicInspectionController;
 use App\Http\Controllers\Api\V1\ServiceTypeController;
+use App\Http\Controllers\Api\V1\TemplateCategoryController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Inspection Requests
     Route::apiResource('inspection-requests', InspectionRequestController::class);
 
+    // Template Categories
+    Route::get('/template-categories', [TemplateCategoryController::class, 'index']);
+    Route::post('/template-categories', [TemplateCategoryController::class, 'store'])->middleware('role:admin');
+    Route::patch('/template-categories/{templateCategory}', [TemplateCategoryController::class, 'update'])->middleware('role:admin');
+    Route::delete('/template-categories/{templateCategory}', [TemplateCategoryController::class, 'destroy'])->middleware('role:admin');
+
     // Inspection Templates
     Route::post('/inspection-templates/{template}/duplicate', [InspectionTemplateController::class, 'duplicate']);
     Route::apiResource('inspection-templates', InspectionTemplateController::class);
@@ -61,6 +68,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Inspections
     Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswers']);
     Route::post('/inspections/{inspection}/submit', [InspectionController::class, 'submit']);
+    Route::post('/inspections/{inspection}/reopen', [InspectionController::class, 'reopen']);
     Route::post('/inspections/{inspection}/photos', [InspectionController::class, 'uploadPhotos']);
     Route::post('/inspections/{inspection}/findings', [InspectionController::class, 'createFinding']);
     Route::post('/inspections/{inspection}/sign', [InspectionController::class, 'sign']);

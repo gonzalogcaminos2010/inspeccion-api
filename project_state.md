@@ -1,6 +1,6 @@
 # Project State - api-inspeccion
 
-Last updated: 2026-03-20
+Last updated: 2026-05-19
 
 ## What Has Been Implemented
 
@@ -140,8 +140,27 @@ Last updated: 2026-03-20
 - The spec is manually maintained (not auto-generated). When adding/modifying endpoints, update `api-docs.json` manually.
 - Potential improvement: install `dedoc/scramble` for auto-generated docs from code annotations.
 
+### Phase 11: Template Categories CRUD (2026-05-19)
+- New `template_categories` table: `id`, `code` (unique slug), `name`, `is_active`, timestamps
+- `TemplateCategorySeeder` creates 10 default categories (vehiculo_liviano, camioneta_4x4, perforadora_diamantina, equipo_pesado_mineria, grua_izaje, compresor, generador, instalacion_electrica, instalacion_industrial, otro)
+- 4 endpoints under `/template-categories`:
+  - `GET` (all authenticated, filter `?active=true`, paginated default 100/page)
+  - `POST` (admin only, validates slug format `[a-z0-9_]+`, returns 409 if code exists)
+  - `PATCH` (admin only, updates `name`/`is_active`, `code` immutable)
+  - `DELETE` (admin only, soft-deletes if `inspection_templates.vehicle_type` references the code, hard-deletes otherwise, returns 204)
+- Categories link to templates via `inspection_templates.vehicle_type` (no schema change to that column)
+
+### Phase 12: Reopen Inspection (2026-05-19)
+- New endpoint `POST /inspections/{id}/reopen`
+- Only the owning inspector (`inspector_id === user.id`) can reopen — supervisor/admin cannot
+- Allowed source states: `submitted`, `returned`. Other states → 409
+- Effect: `status = in_progress`, `completed_at = null`. Answers/findings/photos preserved.
+
 ### Decisions & Investigations Log
 - **"Solicitado por" field (2026-03-19):** Frontend had a text input for "Solicitado por" in the inspection request form. Investigation confirmed backend already handles this automatically — `created_by` FK is set to `$request->user()->id` on creation, and `InspectionRequestResource` returns `creator` (UserResource) when the relation is loaded. **No backend changes needed.** Frontend team notified to remove the text field and display the logged-in user's name as read-only.
+- **Template categories link field (2026-05-19):** Spec referenced an `inspection_templates.category` column but the actual column is `vehicle_type`. Decision: keep `vehicle_type` as the link field (no migration). Categories' `code` matches `inspection_templates.vehicle_type` string.
+- **Status casing (2026-05-19):** Spec used UPPERCASE statuses (`SUBMITTED`, `IN_PROGRESS`, `RETURNED`) but codebase uses lowercase. Mapped accordingly: `submitted`, `in_progress`, `returned`.
+- **Reopen permission scope (2026-05-19):** Decided to restrict reopen to the owning inspector only. Admin/supervisor cannot reopen — they should use `return` instead to send back to inspector.
 
 ### Other Potential Improvements
 - Soft deletes on key models (clients, equipment, inspections)

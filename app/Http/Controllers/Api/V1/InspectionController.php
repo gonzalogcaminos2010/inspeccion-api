@@ -322,6 +322,34 @@ class InspectionController extends Controller
         return $this->success(new FindingResource($finding), 'Finding created successfully', 201);
     }
 
+    public function reopen(Request $request, Inspection $inspection)
+    {
+        if ($request->user()->id !== $inspection->inspector_id) {
+            return $this->error('Solo el inspector dueño de la inspección puede reabrirla.', 403);
+        }
+
+        if (! in_array($inspection->status, ['submitted', 'returned'])) {
+            return $this->error("No se puede reabrir: la inspección está en estado {$inspection->status}.", 409);
+        }
+
+        $inspection->update([
+            'status' => 'in_progress',
+            'completed_at' => null,
+        ]);
+
+        $inspection->load([
+            'template.sections.questions',
+            'answers',
+            'photos',
+            'findings.photos',
+            'workOrderItem.workOrder',
+            'inspector',
+            'equipment',
+        ]);
+
+        return $this->success(new InspectionResource($inspection), 'Inspección reabierta correctamente.');
+    }
+
     public function sign(Request $request, Inspection $inspection)
     {
         $validated = $request->validate([
