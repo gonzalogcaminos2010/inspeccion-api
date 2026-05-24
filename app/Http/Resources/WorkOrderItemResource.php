@@ -21,6 +21,15 @@ class WorkOrderItemResource extends JsonResource
             'notes' => $this->notes,
             'completed_at' => $this->completed_at,
             'order_number' => $this->whenLoaded('workOrder', fn () => $this->workOrder->order_number),
+            'work_order' => $this->whenLoaded('workOrder', fn () => [
+                'id' => $this->workOrder->id,
+                'order_number' => $this->workOrder->order_number,
+                'status' => $this->workOrder->status,
+                'scheduled_date' => $this->workOrder->scheduled_date,
+                'client' => $this->workOrder->relationLoaded('inspectionRequest') && $this->workOrder->inspectionRequest?->relationLoaded('client')
+                    ? new ClientResource($this->workOrder->inspectionRequest->client)
+                    : null,
+            ]),
             'equipment' => new EquipmentResource($this->whenLoaded('equipment')),
             'template' => new InspectionTemplateResource($this->whenLoaded('template')),
             'inspection' => new InspectionResource($this->whenLoaded('inspection')),

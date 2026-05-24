@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\ServiceTypeController;
 use App\Http\Controllers\Api\V1\TemplateCategoryController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkOrderController;
+use App\Http\Controllers\Api\V1\WorkOrderItemController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -65,6 +66,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete']);
     Route::get('/work-orders/{workOrder}/items', [WorkOrderController::class, 'items']);
     Route::apiResource('work-orders', WorkOrderController::class);
+
+    // Work Order Items ("my items" + per-item reassignment)
+    Route::get('/work-order-items', [WorkOrderItemController::class, 'index']);
+    Route::patch('/work-order-items/{workOrderItem}', [WorkOrderItemController::class, 'update'])
+        ->middleware('role:supervisor,admin');
 
     // Inspections
     Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswers']);

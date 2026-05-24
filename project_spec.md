@@ -36,9 +36,9 @@ Client (mining company with vehicles)
 InspectionRequest (REQ-YYYYMMDD-XXXX)
   |
   v
-WorkOrder (OT-YYYYMMDD-XXXX) -- assigned to an Inspector
-  |-- WorkOrderItem (equipment + template pair)
-  |-- WorkOrderItem (equipment + template pair)
+WorkOrder (OT-YYYYMMDD-XXXX) -- assigned to a lead Inspector
+  |-- WorkOrderItem (equipment + template pair, optional own inspector_id)
+  |-- WorkOrderItem (equipment + template pair, optional own inspector_id)
   |
   v
 Inspection (per WorkOrderItem, performed by Inspector)
@@ -80,6 +80,15 @@ Supervisor Review
 ### Work Order Completion
 - A work order can only be marked as `completed` when **all** its items have status `completed` or `skipped`.
 - Attempting to complete with pending/in-progress items returns a 422 error.
+
+### Inspector Assignment (per work order and per item)
+- A work order has a **lead inspector** (`work_orders.inspector_id`), optional.
+- Each item may additionally carry its own `work_order_items.inspector_id` (optional). This supports a single work order split across inspectors (e.g. 8 equipment, 4 for inspector A and 4 for inspector B, kept under one OT).
+- **Effective inspector of an item** = `item.inspector_id ?? work_order.inspector_id` (fallback to the lead).
+- `GET /work-orders?inspector_id=X` returns orders where X is the lead **or** owns at least one item.
+- `GET /work-order-items` returns the authenticated inspector's items (directly assigned + fallback items of their led orders); admins/supervisors may pass `?inspector_id=X`.
+- `PATCH /work-order-items/{id}` (supervisor/admin) reassigns a single item to another inspector.
+- `inspections.inspector_id` is independent: it records who **actually performed** the inspection (the authenticated user at creation), not who was assigned.
 
 ### Flag Detection (is_flagged)
 - Applied during `saveAnswers` for `yes_no` type questions.

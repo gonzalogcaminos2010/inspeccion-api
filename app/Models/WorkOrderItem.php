@@ -15,6 +15,7 @@ class WorkOrderItem extends Model
         'work_order_id',
         'equipment_id',
         'inspection_template_id',
+        'inspector_id',
         'status',
         'notes',
     ];
@@ -22,6 +23,20 @@ class WorkOrderItem extends Model
     public function workOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class);
+    }
+
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    /**
+     * Effective inspector for this item: the item-level assignment if present,
+     * otherwise the work order's lead inspector.
+     */
+    public function getEffectiveInspectorIdAttribute(): ?int
+    {
+        return $this->inspector_id ?? $this->workOrder?->inspector_id;
     }
 
     public function equipment(): BelongsTo

@@ -82,6 +82,7 @@ php artisan route:list    # List all registered routes
 - `app/Http/Middleware/` — CheckRole middleware
 - `app/Http/Resources/` — 14 API Resource classes
 - `app/Models/` — 14 Eloquent models
+- **Per-item inspector assignment:** `work_order_items.inspector_id` (nullable) lets a single WorkOrder be split across inspectors. Effective inspector = `item.inspector_id ?? work_order.inspector_id`. Endpoints: `GET /v1/work-order-items` ("my items"), `PATCH /v1/work-order-items/{id}` (reassign, supervisor/admin). `inspections.inspector_id` still records who actually performed the inspection.
 - `app/Traits/ApiResponse.php` — Standardized response trait
 - `database/migrations/` — 18 migration files
 - `database/seeders/` — DatabaseSeeder + InspectionTemplateSeeder

@@ -236,6 +236,7 @@ Standard Sanctum table for API token storage.
 | work_order_id          | FK        | -> work_orders, cascadeOnDelete          |
 | equipment_id           | FK        | -> equipment, cascadeOnDelete            |
 | inspection_template_id | FK        | -> inspection_templates, cascadeOnDelete |
+| inspector_id           | FK        | -> users, nullable, nullOnDelete (per-item assignment; falls back to work_orders.inspector_id) |
 | status                 | string    | default: 'pending'                       |
 | notes                  | text      | nullable                                 |
 | created_at             | timestamp |                                          |
@@ -423,7 +424,13 @@ All routes are prefixed with `/api`. Protected routes require `Authorization: Be
 | DELETE | /v1/work-orders/{id}                | WorkOrderController@destroy     |
 | POST   | /v1/work-orders/{id}/start          | WorkOrderController@start       |
 | POST   | /v1/work-orders/{id}/complete       | WorkOrderController@complete    |
-| GET    | /v1/work-orders/{id}/items          | WorkOrderController@items       |
+| GET    | /v1/work-orders/{id}/items          | WorkOrderController@items (optional ?inspector_id filter) |
+
+### Work Order Items (per-item inspector assignment)
+| Method | Path                                | Controller@Method               |
+| ------ | ----------------------------------- | ------------------------------- |
+| GET    | /v1/work-order-items                | WorkOrderItemController@index ("my items"; ?inspector_id for admin/supervisor) |
+| PATCH  | /v1/work-order-items/{id}           | WorkOrderItemController@update (reassign inspector; role:supervisor,admin) |
 
 ### Inspections (partial apiResource + custom)
 | Method | Path                                    | Controller@Method                  |
@@ -507,7 +514,7 @@ All responses use the `ApiResponse` trait with a standardized JSON structure.
 | TemplateSectionResource     | id, name, order, description, questions (nested)               |
 | TemplateQuestionResource    | id, text, type, options, is_required, order, fail_values       |
 | WorkOrderResource           | id, order_number, inspection_request, inspector, dates, status, notes, items |
-| WorkOrderItemResource       | id, equipment, template, status, notes                         |
+| WorkOrderItemResource       | id, equipment, template, inspector_id, inspector, status, notes, work_order (when loaded) |
 | InspectionResource          | id, template, equipment, inspector, approver, work_order_item, status, overall_result, score, observations, approved_by, approved_at, supervisor_notes, answers, photos, findings, timestamps |
 | InspectionAnswerResource    | id, template_question_id, answer_*, is_flagged, notes          |
 | InspectionPhotoResource     | id, photo_path, photo_url, caption, question_id, finding_id   |

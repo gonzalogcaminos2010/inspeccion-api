@@ -17,7 +17,7 @@ class WorkOrderController extends Controller
     public function index(Request $request)
     {
         $query = WorkOrder::query()
-            ->with(['inspectionRequest.client', 'inspector', 'items.equipment', 'items.template']);
+            ->with(['inspectionRequest.client', 'inspector', 'items.equipment', 'items.template', 'items.inspector']);
 
         if ($search = $request->query('search')) {
             $query->where('order_number', 'like', "%{$search}%");
@@ -28,7 +28,13 @@ class WorkOrderController extends Controller
         }
 
         if ($request->has('inspector_id')) {
-            $query->where('inspector_id', $request->query('inspector_id'));
+            $inspectorId = $request->query('inspector_id');
+            // Match work orders led by this inspector OR containing at least one
+            // item individually assigned to them.
+            $query->where(function ($q) use ($inspectorId) {
+                $q->where('inspector_id', $inspectorId)
+                    ->orWhereHas('items', fn ($i) => $i->where('inspector_id', $inspectorId));
+            });
         }
 
         if ($request->has('status')) {
@@ -53,6 +59,7 @@ class WorkOrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.equipment_id' => 'required|exists:equipment,id',
             'items.*.inspection_template_id' => 'required|exists:inspection_templates,id',
+            'items.*.inspector_id' => 'nullable|exists:users,id',
         ]);
 
         $workOrder = DB::transaction(function () use ($validated) {
@@ -70,20 +77,21 @@ class WorkOrderController extends Controller
                 $workOrder->items()->create([
                     'equipment_id' => $item['equipment_id'],
                     'inspection_template_id' => $item['inspection_template_id'],
+                    'inspector_id' => $item['inspector_id'] ?? null,
                 ]);
             }
 
             return $workOrder;
         });
 
-        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template', 'items.inspection']);
+        $workOrder->load(['inspectionRequest', 'inspector', 'items.equipment', 'items.template', 'items.inspector', 'items.inspection']);
 
         return $this->success(new WorkOrderResource($workOrder), 'Work order created successfully', 201);
     }
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['inspectionRequest.client', 'inspector', 'items.equipment', 'items.template', 'items.inspection']);
+        $workOrder->load(['inspectionRequest.client', 'inspector', 'items.equipment', 'items.template', 'items.inspector', 'items.inspection']);
 
         return $this->success(new WorkOrderResource($workOrder));
     }
@@ -138,9 +146,15 @@ class WorkOrderController extends Controller
         return $this->success(new WorkOrderResource($workOrder), 'Work order completed successfully');
     }
 
-    public function items(WorkOrder $workOrder)
+    public function items(Request $request, WorkOrder $workOrder)
     {
-        $items = $workOrder->items()->with(['equipment', 'template', 'inspection'])->get();
+        $query = $workOrder->items()->with(['equipment', 'template', 'inspector', 'inspection']);
+
+        if ($request->has('inspector_id')) {
+            $query->where('inspector_id', $request->query('inspector_id'));
+        }
+
+        $items = $query->get();
 
         return $this->success(WorkOrderItemResource::collection($items), 'Work order items retrieved successfully');
     }

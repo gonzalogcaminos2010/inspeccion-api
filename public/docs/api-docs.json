@@ -1297,7 +1297,7 @@
           {
             "name": "inspector_id",
             "in": "query",
-            "description": "Filter by inspector user ID",
+            "description": "Filter by inspector: returns orders where this user is the lead inspector OR owns at least one item (per-item assignment).",
             "schema": { "type": "integer" }
           },
           {
@@ -1559,9 +1559,15 @@
       "get": {
         "tags": ["Work Orders"],
         "summary": "Get work order items",
-        "description": "Retrieve all items for a specific work order. Each item includes related equipment and template.",
+        "description": "Retrieve all items for a specific work order. Each item includes related equipment, template, and inspector. Optionally filterable by inspector_id.",
         "parameters": [
-          { "$ref": "#/components/parameters/IdParam" }
+          { "$ref": "#/components/parameters/IdParam" },
+          {
+            "name": "inspector_id",
+            "in": "query",
+            "description": "Filter items by the per-item assigned inspector",
+            "schema": { "type": "integer" }
+          }
         ],
         "responses": {
           "200": {
@@ -1587,6 +1593,120 @@
           },
           "401": { "$ref": "#/components/responses/Unauthenticated" },
           "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/work-order-items": {
+      "get": {
+        "tags": ["Work Orders"],
+        "summary": "List my work order items",
+        "description": "Flat, paginated list of items assigned to the authenticated inspector across all work orders. Matches items directly assigned to the inspector plus unassigned items of work orders they lead (fallback). Admins/supervisors may pass inspector_id to view another inspector's items. Filterable by status and work_order_id.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PerPageParam" },
+          {
+            "name": "inspector_id",
+            "in": "query",
+            "description": "Admin/supervisor only: view items for a specific inspector. Ignored for inspector role (always scoped to self).",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by item status",
+            "schema": { "type": "string", "enum": ["pending", "in_progress", "completed", "skipped"] }
+          },
+          {
+            "name": "work_order_id",
+            "in": "query",
+            "description": "Filter by work order ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work order items retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/WorkOrderItem" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/work-order-items/{id}": {
+      "patch": {
+        "tags": ["Work Orders"],
+        "summary": "Reassign work order item inspector",
+        "description": "Reassign a single item to another inspector (or clear assignment with null). Restricted to supervisor and admin roles.",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["inspector_id"],
+                "properties": {
+                  "inspector_id": { "type": "integer", "nullable": true, "example": 3, "description": "New inspector for this item, or null to clear (falls back to work order lead)." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work order item updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/WorkOrderItem" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": {
+            "description": "Forbidden – user is not a supervisor or admin",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          }
         }
       }
     },
@@ -2778,8 +2898,14 @@
           "work_order_id": { "type": "integer", "example": 1 },
           "equipment_id": { "type": "integer", "example": 1 },
           "inspection_template_id": { "type": "integer", "example": 1 },
+          "inspector_id": { "type": "integer", "nullable": true, "example": 3, "description": "Per-item assigned inspector. Falls back to the work order's inspector_id when null." },
           "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "skipped"], "example": "pending" },
           "notes": { "type": "string", "nullable": true },
+          "inspector": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/User" }],
+            "description": "Included when loaded"
+          },
           "equipment": {
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/Equipment" }],
@@ -3177,7 +3303,8 @@
               "required": ["equipment_id", "inspection_template_id"],
               "properties": {
                 "equipment_id": { "type": "integer", "example": 1, "description": "Must reference an existing equipment" },
-                "inspection_template_id": { "type": "integer", "example": 1, "description": "Must reference an existing inspection template" }
+                "inspection_template_id": { "type": "integer", "example": 1, "description": "Must reference an existing inspection template" },
+                "inspector_id": { "type": "integer", "nullable": true, "example": 3, "description": "Optional per-item inspector. When omitted, the item falls back to the work order's inspector_id." }
               }
             }
           }
