@@ -14,7 +14,9 @@ use App\Http\Controllers\Api\V1\PublicInspectionController;
 use App\Http\Controllers\Api\V1\ServiceTypeController;
 use App\Http\Controllers\Api\V1\TemplateCategoryController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\CategoryEquipmentFieldController;
 use App\Http\Controllers\Api\V1\WorkOrderController;
+use App\Http\Controllers\Api\V1\WorkOrderItemController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -55,6 +57,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/template-categories', [TemplateCategoryController::class, 'store'])->middleware('role:admin');
     Route::patch('/template-categories/{templateCategory}', [TemplateCategoryController::class, 'update'])->middleware('role:admin');
     Route::delete('/template-categories/{templateCategory}', [TemplateCategoryController::class, 'destroy'])->middleware('role:admin');
+    Route::get('/template-categories/{templateCategory}/equipment-fields', [TemplateCategoryController::class, 'equipmentFields']);
+    Route::post('/template-categories/{templateCategory}/equipment-fields', [CategoryEquipmentFieldController::class, 'store'])->middleware('role:admin');
+    Route::patch('/category-equipment-fields/{categoryEquipmentField}', [CategoryEquipmentFieldController::class, 'update'])->middleware('role:admin');
+    Route::delete('/category-equipment-fields/{categoryEquipmentField}', [CategoryEquipmentFieldController::class, 'destroy'])->middleware('role:admin');
 
     // Inspection Templates
     Route::post('/inspection-templates/{template}/duplicate', [InspectionTemplateController::class, 'duplicate']);
@@ -66,8 +72,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/work-orders/{workOrder}/items', [WorkOrderController::class, 'items']);
     Route::apiResource('work-orders', WorkOrderController::class);
 
+    // Work Order Items (per-item actions)
+    Route::post('/work-order-items/{workOrderItem}/resolve-equipment', [WorkOrderItemController::class, 'resolveEquipment']);
+
     // Inspections
     Route::post('/inspections/{inspection}/answers', [InspectionController::class, 'saveAnswers']);
+    Route::post('/inspections/{inspection}/equipment-data', [InspectionController::class, 'saveEquipmentData']);
     Route::post('/inspections/{inspection}/submit', [InspectionController::class, 'submit']);
     Route::post('/inspections/{inspection}/reopen', [InspectionController::class, 'reopen']);
     Route::post('/inspections/{inspection}/photos', [InspectionController::class, 'uploadPhotos']);

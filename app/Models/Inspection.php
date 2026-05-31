@@ -34,6 +34,7 @@ class Inspection extends Model
         'certificate_number',
         'certificate_issued_at',
         'qr_token',
+        'equipment_data',
     ];
 
     protected function casts(): array
@@ -46,6 +47,7 @@ class Inspection extends Model
             'supervisor_signed_at' => 'datetime',
             'client_signed_at' => 'datetime',
             'certificate_issued_at' => 'datetime',
+            'equipment_data' => 'array',
         ];
     }
 

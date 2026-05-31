@@ -34,6 +34,9 @@ class DatabaseSeeder extends Seeder
             TemplateCategorySeeder::class,
             InspectionTemplateSeeder::class,
             LenorGruaArticuladaTemplateSeeder::class,
+            BackfillTemplateCategorySeeder::class,
+            BackfillEquipmentCategorySeeder::class,
+            CategoryEquipmentFieldSeeder::class,
         ]);
     }
 }

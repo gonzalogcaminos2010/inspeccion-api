@@ -20,6 +20,7 @@ class TemplateCategorySeeder extends Seeder
             ['code' => 'instalacion_electrica', 'name' => 'Instalación Eléctrica'],
             ['code' => 'instalacion_industrial', 'name' => 'Instalación Industrial'],
             ['code' => 'otro', 'name' => 'Otro'],
+            ['code' => 'sin_clasificar', 'name' => 'Sin Clasificar'],
         ];
 
         foreach ($categories as $cat) {

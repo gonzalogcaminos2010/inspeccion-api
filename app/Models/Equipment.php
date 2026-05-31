@@ -15,6 +15,7 @@ class Equipment extends Model
         'client_id',
         'name',
         'type',
+        'category_id',
         'brand',
         'model',
         'year',
@@ -23,18 +24,33 @@ class Equipment extends Model
         'internal_code',
         'metadata',
         'status',
+        'next_inspection_due_at',
+        'last_inspection_completed_at',
+        'last_inspection_id',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'next_inspection_due_at' => 'date',
+            'last_inspection_completed_at' => 'datetime',
         ];
     }
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(TemplateCategory::class, 'category_id');
+    }
+
+    public function lastInspection(): BelongsTo
+    {
+        return $this->belongsTo(Inspection::class, 'last_inspection_id');
     }
 
     public function workOrderItems(): HasMany

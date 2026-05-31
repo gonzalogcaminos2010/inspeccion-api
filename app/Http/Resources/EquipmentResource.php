@@ -14,6 +14,7 @@ class EquipmentResource extends JsonResource
             'client_id' => $this->client_id,
             'name' => $this->name,
             'type' => $this->type,
+            'category_id' => $this->category_id,
             'brand' => $this->brand,
             'model' => $this->model,
             'year' => $this->year,
@@ -23,8 +24,12 @@ class EquipmentResource extends JsonResource
             'equipment_code' => $this->internal_code,
             'metadata' => $this->metadata,
             'status' => $this->status,
+            'next_inspection_due_at' => $this->next_inspection_due_at?->toDateString(),
+            'last_inspection_completed_at' => $this->last_inspection_completed_at,
+            'last_inspection_id' => $this->last_inspection_id,
             'created_at' => $this->created_at,
             'client' => new ClientResource($this->whenLoaded('client')),
+            'category' => new TemplateCategoryResource($this->whenLoaded('category')),
         ];
     }
 }
