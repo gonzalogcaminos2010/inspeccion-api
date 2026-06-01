@@ -387,6 +387,48 @@ it('submit materializes a placeholder from the inspector identification data', f
     expect(WorkOrderItem::find($itemId)->is_equipment_placeholder)->toBeFalse();
 });
 
+it('submit binds to an existing equipment when plate matches (no duplicate)', function () {
+    $ctx = flowContext();
+    Sanctum::actingAs($ctx['inspector']);
+
+    // This equipment was audited before (same client + category, real plate).
+    $existing = Equipment::create([
+        'client_id' => $ctx['client']->id, 'category_id' => $ctx['category']->id,
+        'name' => 'Grúa vieja', 'status' => 'active', 'plate' => 'XYZ789',
+        'metadata' => ['marca' => 'Grove'],
+    ]);
+
+    // Order created "a determinar" -> placeholder.
+    $createResp = $this->postJson('/api/v1/work-orders', [
+        'inspection_request_id' => $ctx['request']->id,
+        'inspector_id' => $ctx['inspector']->id,
+        'items' => [['category_id' => $ctx['category']->id]],
+    ]);
+    $itemId = $createResp->json('data.items.0.id');
+    $placeholderId = WorkOrderItem::find($itemId)->equipment_id;
+
+    $insp = Inspection::create([
+        'work_order_item_id' => $itemId,
+        'inspection_template_id' => $ctx['template']->id,
+        'equipment_id' => $placeholderId,
+        'inspector_id' => $ctx['inspector']->id,
+        'status' => 'in_progress', 'started_at' => now(),
+    ]);
+
+    // Inspector enters the plate of the already-registered equipment.
+    $this->postJson("/api/v1/inspections/{$insp->id}/equipment-data", [
+        'fields' => ['marca' => 'Grove', 'dominio' => 'XYZ789'],
+    ])->assertOk();
+
+    $this->postJson("/api/v1/inspections/{$insp->id}/submit")->assertOk();
+
+    // Bound to the existing equipment; placeholder deleted; no duplicate created.
+    expect(WorkOrderItem::find($itemId)->equipment_id)->toBe($existing->id);
+    expect(Inspection::find($insp->id)->equipment_id)->toBe($existing->id);
+    expect(Equipment::find($placeholderId))->toBeNull();
+    expect(Equipment::where('client_id', $ctx['client']->id)->where('plate', 'XYZ789')->count())->toBe(1);
+});
+
 it('submit is blocked when required identification fields are missing', function () {
     $ctx = flowContext();
     Sanctum::actingAs($ctx['inspector']);

@@ -511,6 +511,38 @@ class InspectionController extends Controller
 
         $buffer = $inspection->equipment_data ?? [];
 
+        // Dedupe: if the inspector typed a plate/serial that already belongs to an
+        // existing (non-placeholder) equipment of this client, bind to THAT one and
+        // drop the placeholder — the equipment was audited before.
+        $plate = $buffer['dominio'] ?? $buffer['patente'] ?? null;
+        $serial = $buffer['num_serie'] ?? null;
+        $existing = null;
+        foreach ([['plate', $plate], ['serial_number', $serial]] as [$col, $val]) {
+            if (! $val) {
+                continue;
+            }
+            $existing = Equipment::where('client_id', $equipment->client_id)
+                ->where($col, $val)
+                ->where('id', '!=', $equipment->id)
+                ->where('status', '!=', 'placeholder')
+                ->first();
+            if ($existing) {
+                break;
+            }
+        }
+
+        if ($existing) {
+            $item->update(['equipment_id' => $existing->id, 'is_equipment_placeholder' => false]);
+            $inspection->update(['equipment_id' => $existing->id]);
+            $inspection->setRelation('equipment', $existing);
+            // Remove the now-unused placeholder.
+            if ($equipment->status === 'placeholder') {
+                $equipment->delete();
+            }
+
+            return;
+        }
+
         // Canonical identification keys → equipment columns (best-effort per category).
         $map = [
             'marca' => 'brand',
