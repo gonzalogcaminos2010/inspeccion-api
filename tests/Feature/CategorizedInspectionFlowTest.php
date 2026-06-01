@@ -347,28 +347,44 @@ it('GET inspection exposes equipment_fields with merged value and locked flag', 
     expect($byKey['proxima_inspeccion']['locked'])->toBeFalse();
 });
 
-it('submit is blocked when item is still a placeholder', function () {
+it('submit materializes a placeholder from the inspector identification data', function () {
     $ctx = flowContext();
     Sanctum::actingAs($ctx['inspector']);
 
+    // Order created "a determinar" -> backend makes a placeholder equipment.
     $createResp = $this->postJson('/api/v1/work-orders', [
         'inspection_request_id' => $ctx['request']->id,
         'inspector_id' => $ctx['inspector']->id,
         'items' => [['category_id' => $ctx['category']->id]],
     ]);
     $itemId = $createResp->json('data.items.0.id');
+    $placeholderId = WorkOrderItem::find($itemId)->equipment_id;
+    expect(Equipment::find($placeholderId)->status)->toBe('placeholder');
 
-    // Inspection starts on top of the placeholder (still flagged).
     $insp = Inspection::create([
         'work_order_item_id' => $itemId,
         'inspection_template_id' => $ctx['template']->id,
-        'equipment_id' => WorkOrderItem::find($itemId)->equipment_id,
+        'equipment_id' => $placeholderId,
         'inspector_id' => $ctx['inspector']->id,
         'status' => 'in_progress',
         'started_at' => now(),
     ]);
 
-    $this->postJson("/api/v1/inspections/{$insp->id}/submit")->assertStatus(422);
+    // Inspector identifies the equipment in the field (marca is required).
+    $this->postJson("/api/v1/inspections/{$insp->id}/equipment-data", [
+        'fields' => ['marca' => 'Liebherr', 'modelo' => 'LTM 1100', 'horas_motor' => 1200],
+    ])->assertOk();
+
+    // Now submit succeeds (no separate resolve step) and the placeholder becomes real.
+    $this->postJson("/api/v1/inspections/{$insp->id}/submit")->assertOk();
+
+    $eq = Equipment::find($placeholderId)->fresh();
+    expect($eq->status)->toBe('active');
+    expect($eq->brand)->toBe('Liebherr');
+    expect($eq->model)->toBe('LTM 1100');
+    expect($eq->name)->toBe('Liebherr LTM 1100');
+    expect($eq->metadata['horas_motor'])->toBe(1200);
+    expect(WorkOrderItem::find($itemId)->is_equipment_placeholder)->toBeFalse();
 });
 
 it('submit is blocked when required identification fields are missing', function () {

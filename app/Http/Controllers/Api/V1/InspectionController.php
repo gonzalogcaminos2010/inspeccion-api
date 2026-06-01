@@ -185,15 +185,8 @@ class InspectionController extends Controller
 
         $inspection->load(['workOrderItem.category.equipmentFields', 'equipment', 'answers.question']);
 
-        // Guard 1: placeholder must be resolved before submit.
-        if ($inspection->workOrderItem?->is_equipment_placeholder) {
-            return $this->error(
-                'El equipo de esta inspección es un placeholder: resuélvalo antes de enviar (POST /work-order-items/{id}/resolve-equipment).',
-                422
-            );
-        }
-
-        // Guard 2: all category required fields must have value in equipment_data OR equipment.metadata.
+        // Guard: all category required fields must have value in equipment_data OR equipment.metadata.
+        // (Runs for placeholders too — the inspector identifies the equipment here.)
         $missing = $this->missingRequiredFields($inspection);
         if (! empty($missing)) {
             return response()->json([
@@ -202,6 +195,11 @@ class InspectionController extends Controller
                 'missing_fields' => $missing,
             ], 422);
         }
+
+        // If the equipment was a placeholder (order created "a determinar"), the
+        // identification data the inspector just entered materializes it into a
+        // real equipment. No separate resolve step needed.
+        $this->promoteIfPlaceholder($inspection);
 
         // Sync inspection.equipment_data → equipment.metadata (respecting is_mutable).
         $this->syncEquipmentData($inspection);
@@ -491,6 +489,55 @@ class InspectionController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Materialize a placeholder equipment from the inspector's identification data.
+     * Maps canonical identification keys to equipment columns, sets it active and
+     * clears the placeholder flag on the work order item. Metadata is filled by
+     * syncEquipmentData afterwards. No-op when the item isn't a placeholder.
+     */
+    protected function promoteIfPlaceholder(Inspection $inspection): void
+    {
+        $item = $inspection->workOrderItem;
+        if (! $item || ! $item->is_equipment_placeholder) {
+            return;
+        }
+
+        $equipment = $inspection->equipment;
+        if (! $equipment) {
+            return;
+        }
+
+        $buffer = $inspection->equipment_data ?? [];
+
+        // Canonical identification keys → equipment columns (best-effort per category).
+        $map = [
+            'marca' => 'brand',
+            'modelo' => 'model',
+            'dominio' => 'plate',
+            'patente' => 'plate',
+            'num_serie' => 'serial_number',
+            'anio_fabricacion' => 'year',
+        ];
+
+        $cols = [];
+        foreach ($map as $key => $col) {
+            if (! empty($buffer[$key])) {
+                $cols[$col] = (string) $buffer[$key];
+            }
+        }
+
+        // Give it a human name from brand + model when available.
+        $name = trim(($buffer['marca'] ?? '').' '.($buffer['modelo'] ?? ''));
+        if ($name !== '') {
+            $cols['name'] = $name;
+        }
+
+        $cols['status'] = 'active';
+
+        $equipment->update($cols);
+        $item->update(['is_equipment_placeholder' => false]);
     }
 
     /**
