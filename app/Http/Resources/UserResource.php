@@ -15,9 +15,9 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role,
             'is_active' => $this->is_active,
-            // Session capability: AI photo analysis is on only when enabled AND keyed.
-            'ai_enabled' => (bool) config('services.anthropic.photo_analysis_enabled')
-                && ! empty(config('services.anthropic.api_key')),
+            // Session capability: AI photo analysis on only when the active
+            // provider (gemini/anthropic) is enabled AND keyed.
+            'ai_enabled' => \App\Services\Ai\AiConfig::enabled(),
             'created_at' => $this->created_at,
         ];
     }

@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\AiAnalysis;
 use App\Models\InspectionPhoto;
+use App\Services\Ai\AiConfig;
 use App\Services\Ai\PhotoAnalysisException;
-use App\Services\Ai\PhotoAnalysisService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -31,13 +31,8 @@ class AiAnalysisController extends Controller
             'photo_id' => 'required|integer',
         ]);
 
-        if (! config('services.anthropic.photo_analysis_enabled')) {
-            return $this->error('La funcionalidad de análisis por IA está deshabilitada.', 503);
-        }
-
-        $apiKey = config('services.anthropic.api_key');
-        if (empty($apiKey)) {
-            return $this->error('La integración con IA no está configurada.', 503);
+        if (! AiConfig::enabled()) {
+            return $this->error('La integración con IA no está configurada o está deshabilitada.', 503);
         }
 
         $photo = InspectionPhoto::with('inspection')->find($validated['photo_id']);
@@ -65,7 +60,7 @@ class AiAnalysisController extends Controller
         $contents = Storage::disk('public')->get($photo->photo_path);
         $base64 = base64_encode($contents);
 
-        $service = new PhotoAnalysisService($apiKey, config('services.anthropic.model'));
+        $service = AiConfig::makeAnalyzer();
 
         try {
             $result = $service->analyze($base64, $mediaType);
@@ -79,7 +74,7 @@ class AiAnalysisController extends Controller
             'photo_id' => $photo->id,
             'inspection_id' => $photo->inspection_id,
             'requested_by_user_id' => $user->id,
-            'model' => config('services.anthropic.model'),
+            'model' => AiConfig::provider().':'.AiConfig::model(),
             'prompt_version' => 'v1',
             'response_json' => $result['raw'],
             'has_defect' => (bool) ($parsed['has_defect'] ?? false),

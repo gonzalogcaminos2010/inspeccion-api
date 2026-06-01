@@ -22,6 +22,9 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Storage::fake('public');
     config([
+        // These tests exercise the Anthropic adapter explicitly.
+        'services.ai.provider' => 'anthropic',
+        'services.ai.photo_analysis_enabled' => true,
         'services.anthropic.api_key' => 'test-key-xyz',
         'services.anthropic.photo_analysis_enabled' => true,
         'services.anthropic.model' => 'claude-sonnet-4-6',
@@ -99,6 +102,22 @@ function fakeClaudeResponse(array $payload): array
     ];
 }
 
+function fakeGeminiResponse(array $payload): array
+{
+    return [
+        'candidates' => [
+            [
+                'content' => [
+                    'parts' => [
+                        ['text' => json_encode($payload)],
+                    ],
+                ],
+                'finishReason' => 'STOP',
+            ],
+        ],
+    ];
+}
+
 it('analyzes a photo with detected defect', function () {
     $inspector = User::factory()->create(['role' => 'inspector', 'is_active' => true]);
     [$inspection, $photo] = makeAiPhoto($inspector->id);
@@ -128,7 +147,7 @@ it('analyzes a photo with detected defect', function () {
     expect($stored)->not->toBeNull();
     expect($stored->has_defect)->toBeTrue();
     expect($stored->severity)->toBe('HIGH');
-    expect($stored->model)->toBe('claude-sonnet-4-6');
+    expect($stored->model)->toBe('anthropic:claude-sonnet-4-6');
     expect($stored->prompt_version)->toBe('v1');
     expect($stored->used_by_user)->toBeFalse();
     expect($stored->latency_ms)->toBeGreaterThanOrEqual(0);
@@ -183,7 +202,7 @@ it('returns 503 when ANTHROPIC_API_KEY is not configured', function () {
 });
 
 it('returns 503 when AI_PHOTO_ANALYSIS_ENABLED is false', function () {
-    config(['services.anthropic.photo_analysis_enabled' => false]);
+    config(['services.ai.photo_analysis_enabled' => false]);
 
     $inspector = User::factory()->create(['role' => 'inspector', 'is_active' => true]);
     [$inspection, $photo] = makeAiPhoto($inspector->id);
@@ -331,4 +350,51 @@ it('retries once and succeeds when first response is malformed but second is val
     $response = $this->postJson('/api/v1/ai/analyze-photo', ['photo_id' => $photo->id]);
 
     $response->assertOk()->assertJsonPath('data.severity', 'LOW');
+});
+
+it('analyzes a photo via the Gemini provider', function () {
+    config([
+        'services.ai.provider' => 'gemini',
+        'services.gemini.api_key' => 'gemini-test-key',
+        'services.gemini.model' => 'gemini-2.0-flash',
+    ]);
+
+    $inspector = User::factory()->create(['role' => 'inspector', 'is_active' => true]);
+    [$inspection, $photo] = makeAiPhoto($inspector->id);
+
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(fakeGeminiResponse([
+            'has_defect' => true,
+            'title' => 'Corrosión en chasis',
+            'description' => 'Oxidación avanzada en el larguero.',
+            'severity' => 'MEDIUM',
+            'defect_type' => 'corrosion',
+            'observations' => 'Se observa corrosión en el chasis.',
+        ]), 200),
+    ]);
+
+    Sanctum::actingAs($inspector);
+
+    $response = $this->postJson('/api/v1/ai/analyze-photo', ['photo_id' => $photo->id]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.has_defect', true)
+        ->assertJsonPath('data.severity', 'MEDIUM')
+        ->assertJsonPath('data.title', 'Corrosión en chasis');
+
+    $stored = AiAnalysis::find($response->json('data.analysis_id'));
+    expect($stored->model)->toBe('gemini:gemini-2.0-flash');
+    expect($stored->has_defect)->toBeTrue();
+});
+
+it('hides AI (ai_enabled=false) when the active provider has no key', function () {
+    config([
+        'services.ai.provider' => 'gemini',
+        'services.gemini.api_key' => null,
+    ]);
+    $inspector = User::factory()->create(['role' => 'inspector', 'is_active' => true]);
+    Sanctum::actingAs($inspector);
+
+    $me = $this->getJson('/api/v1/me');
+    $me->assertOk()->assertJsonPath('data.ai_enabled', false);
 });

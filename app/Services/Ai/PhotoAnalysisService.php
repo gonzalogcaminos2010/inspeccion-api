@@ -4,7 +4,7 @@ namespace App\Services\Ai;
 
 use Illuminate\Support\Facades\Http;
 
-class PhotoAnalysisService
+class PhotoAnalysisService implements PhotoAnalyzer
 {
     private const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
