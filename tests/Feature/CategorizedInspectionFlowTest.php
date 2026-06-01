@@ -13,7 +13,9 @@ use App\Models\TemplateSection;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
+use App\Mail\InspectionRequestCompletedMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -27,7 +29,7 @@ function flowContext(): array
     $inspector = User::factory()->create(['role' => 'inspector', 'is_active' => true]);
     $supervisor = User::factory()->create(['role' => 'supervisor', 'is_active' => true]);
 
-    $client = Client::create(['name' => 'Mining Co']);
+    $client = Client::create(['name' => 'Mining Co', 'contact_email' => 'cliente@test.com']);
     $serviceType = ServiceType::create(['name' => 'Insp']);
     $category = TemplateCategory::create(['code' => 'cat_test', 'name' => 'Cat Test', 'is_active' => true]);
 
@@ -577,4 +579,44 @@ it('approve respects supervisor override of next_inspection_due_at', function ()
     ])->assertOk();
 
     expect($eq->fresh()->next_inspection_due_at?->toDateString())->toBe('2027-06-30');
+});
+
+it('emails the client only once every inspection of the request is approved', function () {
+    Mail::fake();
+    $ctx = flowContext();
+    Sanctum::actingAs($ctx['supervisor']);
+
+    $wo = WorkOrder::create([
+        'order_number' => 'OT-'.uniqid(),
+        'inspection_request_id' => $ctx['request']->id,
+        'inspector_id' => $ctx['inspector']->id, 'status' => 'in_progress',
+    ]);
+
+    $inspections = [];
+    foreach (['AAA111', 'BBB222'] as $plate) {
+        $eq = Equipment::create([
+            'client_id' => $ctx['client']->id, 'category_id' => $ctx['category']->id,
+            'name' => "EQ {$plate}", 'status' => 'active', 'plate' => $plate,
+        ]);
+        $item = WorkOrderItem::create([
+            'work_order_id' => $wo->id, 'equipment_id' => $eq->id,
+            'category_id' => $ctx['category']->id,
+            'inspection_template_id' => $ctx['template']->id, 'status' => 'in_progress',
+        ]);
+        $inspections[] = Inspection::create([
+            'work_order_item_id' => $item->id,
+            'inspection_template_id' => $ctx['template']->id,
+            'equipment_id' => $eq->id, 'inspector_id' => $ctx['inspector']->id,
+            'status' => 'submitted', 'overall_result' => 'approved',
+        ]);
+    }
+
+    // Approve first -> request not fully done yet -> no email.
+    $this->postJson("/api/v1/inspections/{$inspections[0]->id}/approve")->assertOk();
+    Mail::assertNothingSent();
+
+    // Approve second -> all done -> client emailed once.
+    $this->postJson("/api/v1/inspections/{$inspections[1]->id}/approve")->assertOk();
+    Mail::assertSent(InspectionRequestCompletedMail::class, 1);
+    Mail::assertSent(InspectionRequestCompletedMail::class, fn ($m) => $m->hasTo('cliente@test.com'));
 });

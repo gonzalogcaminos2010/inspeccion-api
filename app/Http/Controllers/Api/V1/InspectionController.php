@@ -12,10 +12,12 @@ use App\Models\Equipment;
 use App\Models\Inspection;
 use App\Models\TemplateCategory;
 use App\Models\TemplateQuestion;
+use App\Mail\InspectionRequestCompletedMail;
 use App\Models\WorkOrderItem;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -298,7 +300,64 @@ class InspectionController extends Controller
             'approver',
         ]);
 
+        // When every inspection of this request is approved, notify the client.
+        $this->maybeNotifyClient($inspection);
+
         return $this->success(new InspectionResource($inspection), 'Inspection approved successfully.');
+    }
+
+    /**
+     * If all inspections under the inspection's request are completed, email the
+     * client a summary. No-op if the request isn't fully done or has no email.
+     * Runs in MAIL_MAILER=log until real SMTP is configured.
+     */
+    protected function maybeNotifyClient(Inspection $inspection): void
+    {
+        $request = $inspection->workOrderItem?->workOrder?->inspectionRequest;
+        if (! $request) {
+            return;
+        }
+
+        $request->load(['workOrders.items.inspection', 'client']);
+
+        $items = $request->workOrders->flatMap->items;
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $allDone = $items->every(
+            fn ($item) => $item->inspection && $item->inspection->status === 'completed'
+        );
+        if (! $allDone) {
+            return;
+        }
+
+        $email = $request->client?->contact_email;
+        if (! $email) {
+            return;
+        }
+
+        // Reload inspections with equipment for the summary table.
+        $inspections = $request->workOrders
+            ->flatMap->items
+            ->map(fn ($item) => $item->inspection)
+            ->filter()
+            ->map(function ($insp) {
+                $insp->loadMissing('equipment');
+
+                return [
+                    'equipment' => $insp->equipment?->name ?? 'Equipo',
+                    'result' => $insp->overall_result,
+                    'certificate' => $insp->certificate_number,
+                    'public_url' => $insp->qr_token
+                        ? rtrim((string) config('app.url'), '/').'/api/v1/public/inspections/'.$insp->qr_token
+                        : null,
+                ];
+            })
+            ->values()
+            ->all();
+
+        Mail::to($email)->send(new InspectionRequestCompletedMail($request, $inspections));
     }
 
     public function returnInspection(Request $request, Inspection $inspection)
