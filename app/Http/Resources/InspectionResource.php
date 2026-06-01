@@ -29,6 +29,7 @@ class InspectionResource extends JsonResource
             'approved_at' => $this->approved_at,
             'supervisor_notes' => $this->supervisor_notes,
             'equipment_data' => $this->equipment_data,
+            'equipment_fields' => $this->identificationFields(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'template' => new InspectionTemplateResource($this->whenLoaded('template')),

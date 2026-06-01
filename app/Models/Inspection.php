@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+// CategoryEquipmentField is in this same namespace (App\Models); no import needed.
 
 class Inspection extends Model
 {
@@ -100,5 +101,63 @@ class Inspection extends Model
         $seq = $last ? (int) substr($last, -4) + 1 : 1;
 
         return sprintf('CERT-%s-%04d', $date, $seq);
+    }
+
+    /**
+     * Resolved identification fields for this inspection's equipment category,
+     * each merged with its current value and a `locked` flag.
+     *
+     * Value precedence: in-flight buffer (equipment_data) over persisted
+     * equipment.metadata. `locked` = immutable field that already has a
+     * persisted value (first-capture-only, mirrors syncEquipmentData()).
+     *
+     * Resolves the category only from already-loaded relations, so list
+     * endpoints that don't eager-load it pay no N+1 cost (returns []).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function identificationFields(): array
+    {
+        $category = null;
+        if ($this->relationLoaded('workOrderItem') && $this->workOrderItem?->relationLoaded('category')) {
+            $category = $this->workOrderItem->category;
+        }
+        if (! $category && $this->relationLoaded('equipment') && $this->equipment?->relationLoaded('category')) {
+            $category = $this->equipment->category;
+        }
+        if (! $category) {
+            return [];
+        }
+
+        $fields = $category->relationLoaded('equipmentFields')
+            ? $category->equipmentFields
+            : $category->equipmentFields()->get();
+
+        $buffer = $this->equipment_data ?? [];
+        $persisted = $this->equipment?->metadata ?? [];
+
+        return $fields
+            ->sortBy('sort_order')
+            ->map(function (CategoryEquipmentField $field) use ($buffer, $persisted) {
+                $hasPersisted = array_key_exists($field->key_name, $persisted)
+                    && $persisted[$field->key_name] !== null
+                    && $persisted[$field->key_name] !== '';
+                $value = $buffer[$field->key_name] ?? $persisted[$field->key_name] ?? null;
+
+                return [
+                    'key_name' => $field->key_name,
+                    'label' => $field->label,
+                    'type' => $field->type,
+                    'options' => $field->options,
+                    'unit' => $field->unit,
+                    'is_required' => (bool) $field->is_required,
+                    'is_mutable' => (bool) $field->is_mutable,
+                    'sort_order' => $field->sort_order,
+                    'value' => $value,
+                    'locked' => ! $field->is_mutable && $hasPersisted,
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

@@ -296,6 +296,57 @@ it('equipment-data buffers fields on the inspection', function () {
     expect($inspection->fresh()->equipment_data)->toBe(['marca' => 'Toyota', 'horas_motor' => 1000]);
 });
 
+it('GET inspection exposes equipment_fields with merged value and locked flag', function () {
+    $ctx = flowContext();
+    Sanctum::actingAs($ctx['inspector']);
+
+    // Equipment already has 'marca' persisted (immutable field, first capture done).
+    $eq = Equipment::create([
+        'client_id' => $ctx['client']->id, 'category_id' => $ctx['category']->id,
+        'name' => 'EQ', 'status' => 'active',
+        'metadata' => ['marca' => 'Toyota'],
+    ]);
+    $wo = WorkOrder::create([
+        'order_number' => 'OT-'.uniqid(),
+        'inspection_request_id' => $ctx['request']->id,
+        'inspector_id' => $ctx['inspector']->id, 'status' => 'in_progress',
+    ]);
+    $item = WorkOrderItem::create([
+        'work_order_id' => $wo->id, 'equipment_id' => $eq->id,
+        'category_id' => $ctx['category']->id,
+        'inspection_template_id' => $ctx['template']->id,
+        'status' => 'in_progress',
+    ]);
+    $inspection = Inspection::create([
+        'work_order_item_id' => $item->id,
+        'inspection_template_id' => $ctx['template']->id,
+        'equipment_id' => $eq->id,
+        'inspector_id' => $ctx['inspector']->id,
+        'status' => 'in_progress', 'started_at' => now(),
+        // In-flight buffer only fills the mutable field.
+        'equipment_data' => ['horas_motor' => 500],
+    ]);
+
+    $fields = $this->getJson("/api/v1/inspections/{$inspection->id}")
+        ->assertOk()
+        ->json('data.equipment_fields');
+
+    $byKey = collect($fields)->keyBy('key_name');
+
+    // Immutable field with persisted value -> value from metadata, locked.
+    expect($byKey['marca']['value'])->toBe('Toyota');
+    expect($byKey['marca']['locked'])->toBeTrue();
+    expect($byKey['marca']['is_required'])->toBeTrue();
+
+    // Mutable field buffered in this inspection -> value from buffer, not locked.
+    expect($byKey['horas_motor']['value'])->toBe(500);
+    expect($byKey['horas_motor']['locked'])->toBeFalse();
+
+    // Untouched field -> null, not locked.
+    expect($byKey['proxima_inspeccion']['value'])->toBeNull();
+    expect($byKey['proxima_inspeccion']['locked'])->toBeFalse();
+});
+
 it('submit is blocked when item is still a placeholder', function () {
     $ctx = flowContext();
     Sanctum::actingAs($ctx['inspector']);

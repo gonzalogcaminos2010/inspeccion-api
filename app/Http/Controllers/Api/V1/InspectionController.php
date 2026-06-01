@@ -103,7 +103,7 @@ class InspectionController extends Controller
             'workOrderItem.workOrder',
             'workOrderItem.category.equipmentFields',
             'inspector',
-            'equipment.category',
+            'equipment.category.equipmentFields',
         ]);
 
         return $this->success(new InspectionResource($inspection));
